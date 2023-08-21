@@ -94,7 +94,7 @@ ST-FLOOD-ST-NAME = Status
 # analog
 ND-MQANAL-NAME = MQTT Analog
 ND-MQANAL-ICON = Input
-ST-ANALOG-GPV-NAME = Analog Input
+ST-ANALOG-GPV-NAME = Analog In
 ST-ANALOG-ST-NAME = Status
 
 # s31
