@@ -885,8 +885,8 @@ class MQAnalog(udi_interface.Node):
     # GPV = "General Purpose Value"
     # UOM:56 = "The raw value reported by device"
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "GPV", "value": 0, "uom": 56},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Analog ST"},
+        {"driver": "GPV", "value": 0, "uom": 56, "name": "Analog IN"},
     ]
 
     id = "MQANAL"

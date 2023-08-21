@@ -18,7 +18,7 @@
             <range uom="5" min="0" max="500" prec="3" />
     </editor>
     <editor id="ANALOG">
-            <range uom="56" min="0" max="1024" prec="0" />
+            <range uom="56" min="-2147483647" max="2147483647" prec="0" />
     </editor>
     <editor id="LEDCLR">
         <range uom="100" min="0" max="255" prec="0" />
