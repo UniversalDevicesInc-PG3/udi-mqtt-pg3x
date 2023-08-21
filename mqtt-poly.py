@@ -880,7 +880,7 @@ class MQAnalog(udi_interface.Node):
             self.setDriver("GPV", 0)
 
     def query(self, command=None):
-        self.controller.mqtt_pub(self.cmd_topic, "")
+        self.controller.mqtt_pub(self.cmd_topic, "10")
         self.reportDrivers()
 
     # GPV = "General Purpose Value"
