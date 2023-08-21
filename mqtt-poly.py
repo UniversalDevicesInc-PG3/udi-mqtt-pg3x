@@ -850,6 +850,7 @@ class MQAnalog(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
+        self.cmd_topic = device["cmd_topic"]
         self.on = False
 
     def updateInfo(self, payload, topic: str):
