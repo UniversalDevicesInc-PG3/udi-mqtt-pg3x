@@ -849,6 +849,7 @@ class ShellyFlood(udi_interface.Node):
 class MQAnalog(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
         self.on = False
 
     def updateInfo(self, payload, topic: str):
@@ -880,7 +881,7 @@ class MQAnalog(udi_interface.Node):
             self.setDriver("GPV", 0)
 
     def query(self, command=None):
-        self.controller.mqtt_pub(self.cmd_topic, 10)
+        self.controller.mqtt_pub(self.cmd_topic, "10")
         self.reportDrivers()
 
     # GPV = "General Purpose Value"
