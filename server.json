@@ -17,7 +17,7 @@
     "longPoll": "60",
     "credits": [
         {
-            "title": "NodeServer to integrate with MQTT Broker",
+            "title": "NodeServer to integrate  devices with MQTT Broker",
             "author": "xKing/TriLife",
             "version": "0.0.12",
             "date": "26 August, 2023",
