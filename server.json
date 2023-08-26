@@ -9,7 +9,7 @@
     "logLevel": "INFO",
     "customParams": {
       "mqtt_server": "localhost",
-      "mqtt_port": 1883,
+      "mqtt_port": 1884,
       "mqtt_user": "username",
       "mqtt_password": "password"
     },
@@ -18,9 +18,9 @@
     "credits": [
         {
             "title": "NodeServer to integrate with MQTT Broker",
-            "author": "xKing",
-            "version": "0.0.11",
-            "date": "12 July, 2023",
+            "author": "xKing/TriLife",
+            "version": "0.0.12",
+            "date": "26 August, 2023",
             "source": "https://github.com/Trilife/udi-mqtt-pg3",
             "license": "https://raw.githubusercontent.com/Trilife/udi-mqtt-pg3/master/LICENSE"
         }
