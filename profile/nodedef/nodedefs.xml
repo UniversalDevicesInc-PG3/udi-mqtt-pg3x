@@ -247,7 +247,8 @@
     <nodeDef id="MQDIMMER" nls="DIMMER">
         <editors />
         <sts>
-            <st id="ST" editor="ST_DIMMER" />
+            <st id="ST" editor="ONOFF" />
+            <st id="GV1" editor="ST_DIMMER" />
         </sts>
         <cmds>
             <sends>
@@ -257,7 +258,7 @@
             <accepts>
                 <cmd id="QUERY" />
                 <cmd id="DON" >
-                    <p id="" editor="ST_DIMMER" init="ST" />
+                    <p id="" editor="ST_DIMMER" init="GV1" />
                 </cmd>
                 <cmd id="DOF" />
                 <cmd id="BRT" />

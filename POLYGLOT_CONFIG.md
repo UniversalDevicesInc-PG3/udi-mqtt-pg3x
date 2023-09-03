@@ -3,7 +3,7 @@
 
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/exking/udi-mqtt-poly/blob/master/LICENSE)
 
-This Poly provides an interface between MQTT broker and [Polyglot v2](https://github.com/UniversalDevicesInc/polyglot-v2) server.
+This Poly provides an interface between MQTT broker and [Polyglot PG3](https://github.com/UniversalDevicesInc/pg3-dist) server.
 
 [This thread](https://forum.universal-devices.com/topic/24538-sonoff/?tab=comments#comment-244571) on UDI forums has more details, ask questions there.
 
@@ -14,9 +14,9 @@ Note - your Sonoff MUST run the [Sonoff-Tasmota](https://github.com/arendst/Sono
 
  2. You will need to define the following custom parameters:
 	 - `mqtt_server` - defaults to 'localhost' 
-	 - `mqtt_port` - defaults to 1883, the example in the thread uses 1884  
-	 - `mqtt_user` - username for the MQTT broker  
-	 - `mqtt_password` - MQTT user's password  
+	 - `mqtt_port` - defaults to 1884, (Do not change, if you're using the default MQTT Broker in PG3x)
+	 - `mqtt_user` - username for the MQTT broker  (Not used in default MQTT Broker in PG3x)
+	 - `mqtt_password` - MQTT user's password  (Not used in default MQTT Broker in PG3x)
 	 - `devfile` - Alternative to `devlist` option below - use the yaml file instead, start with `devices:` and then same syntax
 	 - `devlist` - You will need to put a JSON list of all your Sonoff devices and topics they listen to, for example:
 		- `[  {"id":  "sonoff1",  "type":  "switch",  "status_topic":  "stat/sonoff1/POWER",  "cmd_topic":  "cmnd/sonoff1/power"},  {"id":  "sonoff2",  "type":  "switch",  "status_topic":  "stat/sonoff2/POWER",  "cmd_topic":  "cmnd/sonoff2/power"}  ]`

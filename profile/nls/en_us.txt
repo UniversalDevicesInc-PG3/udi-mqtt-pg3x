@@ -1,3 +1,5 @@
+# LABELS for the Admin Console
+
 # controller
 ND-MQCTRL-NAME = MQTT Controller
 ND-MQCTRL-ICON = GenericCtl
@@ -162,15 +164,11 @@ PGM-CMD-SETRGBW-FMT = /STRIPR// Red ${v}/ /STRIPG// Green ${v}/ /STRIPB// Blue $
 # dimmer
 ND-MQDIMMER-NAME = MQTT Dimmer
 ND-MQDIMMER-ICON = GenericRsp
-ST-DIMMER-ST-NAME = Status
+ST-DIMMER-ST-NAME = Power
+ST-DIMMER-GV1-NAME = Dimmer
 
 CMD-DIMMER-DON-NAME = On
 CMD-DIMMER-DOF-NAME = Off
-CMD-DIMMER-FDUP-NAME = Brighten
-CMD-DIMMER-FDDOWN-NAME = Dim
+CMD-DIMMER-BRT-NAME = Brighten
+CMD-DIMMER-DIM-NAME = Dim
 
-#may need values here
-#DIMSET-0 = Off
-#DIMSET-1 = Low
-#FANSET-2 = Medium
-#FANSET-3 = High

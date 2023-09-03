@@ -3,7 +3,7 @@
         <range uom="2" subset="0,1" />
     </editor>
     <editor id="ONOFF">
-        <range uom="78" subset="0,100" />
+        <range uom="78" subset="0,100" prec="0" />
     </editor>
     <editor id="TEMPF">
         <range uom="17" min="-40" max="176" prec="2" />
@@ -54,6 +54,6 @@
         <range uom="51" min="0" max="100" prec="0" />
     </editor>
         <editor id="ST_DIMMER">
-        <range uom="100" subset="0-100" prec="0" />
+        <range uom="56" subset="0-100" prec="0" />
     </editor>
 </editors>

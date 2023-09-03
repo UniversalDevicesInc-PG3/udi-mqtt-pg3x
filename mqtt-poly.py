@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-
+VERSION = '0.0.14'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
@@ -21,7 +21,7 @@ class Controller(udi_interface.Node):
         self.address = "mqctrl"
         self.primary = self.address
         self.mqtt_server = "localhost"
-        self.mqtt_port = 1883
+        self.mqtt_port = 1884
         self.mqtt_user = None
         self.mqtt_password = None
         self.devlist = None
@@ -44,18 +44,19 @@ class Controller(udi_interface.Node):
         self.poly.Notices.clear()
         self.Parameters.load(params)
         LOGGER.info("Started MQTT controller")
+        # pull in Parameters from Node Server Configuration page
         self.mqtt_server = self.Parameters["mqtt_server"] or 'localhost'
-        self.mqtt_port = int(self.Parameters["mqtt_port"] or 1883)
+        self.mqtt_port = int(self.Parameters["mqtt_port"] or 1884)
         if self.Parameters["mqtt_user"] is None:
             LOGGER.error("mqtt_user must be configured")
             return False
         if self.Parameters["mqtt_password"] is None:
             LOGGER.error("mqtt_password must be configured")
             return False
-
         self.mqtt_user = self.Parameters["mqtt_user"]
         self.mqtt_password = self.Parameters["mqtt_password"]
 
+        # upload the device topics yaml file (multiple devices)
         if self.Parameters["devfile"] is not None:
             try:
                 f = open(self.Parameters["devfile"])
@@ -86,6 +87,7 @@ class Controller(udi_interface.Node):
                 return False
             self.devlist = data["devices"]
 
+        # upload the device topic from the Node Server Configuration Page
         elif self.Parameters["devlist"] is not None:
             try:
                 self.devlist = json.loads(self.Parameters["devlist"])
@@ -98,6 +100,7 @@ class Controller(udi_interface.Node):
 
         self.valid_configuration = True
 
+        # parse out the devices contained in devlist
         for dev in self.devlist:
             if (
                     "id" not in dev
@@ -342,53 +345,69 @@ class MQDimmer(udi_interface.Node):
 
     def updateInfo(self, payload, topic: str):
         try:
-            json_payload = json.loads(payload)
-            dimmer = int(json_payload['Dimmer'])
+            data = json.loads(payload)
+            dimmer = int(data['Dimmer'])
         except Exception as ex:
             LOGGER.error(f"Could not decode payload {payload}: {ex}")
             return False
-        if self.dimmer == 0 and dimmer > 0:
+        if data['POWER'] == 'ON' or (self.dimmer == 0 and dimmer > 0):
             self.reportCmd("DON")
-        if self.dimmer > 0 and dimmer == 0:
+            self.on = True
+            self.setDriver('ST', 100)
+        if data['POWER'] == 'OFF' or (self.dimmer > 0 and dimmer == 0):
             self.reportCmd("DOF")
+            self.on = False
+            self.setDriver('ST', 0)
         self.dimmer = dimmer
-        self.setDriver("ST", self.dimmer)
+        self.setDriver("GV1", self.dimmer)
 
     def set_on(self, command):
         try:
             self.dimmer = int(command.get('value'))
         except Exception as ex:
-            LOGGER.info(f"Unexpected Dimmer Value {ex}, assuming Medium")
-            self.dimmer = 50
-        if 100 < self.dimmer < 0:
-            LOGGER.error(f"Unexpected Dimmer Value {self.dimmer}, assuming Medium")
-            self.dimmer = 50
-        self.setDriver("ST", self.dimmer)
+            LOGGER.info(f"Unexpected Dimmer Value {ex}, turning OFF")
+            self.dimmer = 0
+            # self.on = False
+        # self.on = True
+        self.setDriver("GV1", self.dimmer)
+        self.setDriver('ST', 100)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
 
     def set_off(self, command):
         self.dimmer = 0
-        self.setDriver("ST", self.dimmer)
+        # self.on = False
+        self.setDriver("GV1", self.dimmer)
+        self.setDriver('ST', 0)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
 
     def brighten(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "+")
-        self.dimmer += 10
-        self.setDriver("ST", self.dimmer)
+        if self.dimmer <= 90:
+            self.controller.mqtt_pub(self.cmd_topic, "+")
+            self.dimmer += 10
+            # self.on = True
+            self.setDriver("GV1", self.dimmer)
+            self.setDriver('ST', 100)
 
     def dim(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "-")
-        self.dimmer -= 10
-        self.setDriver("ST", self.dimmer)
+        if self.dimmer >= 10:
+            self.controller.mqtt_pub(self.cmd_topic, "-")
+            self.dimmer -= 10
+            if self.dimmer == 0:
+                # self.on = False
+                self.setDriver('ST', 0)
+            self.setDriver("GV1", self.dimmer)
 
     def query(self, command=None):
         self.controller.mqtt_pub(self.cmd_topic, "")
         self.reportDrivers()
 
-    drivers = [{"driver": "ST", "value": 0, "uom": 100, "name": "Dim Level"}]
+    drivers = [
+        {'driver': 'ST', 'value': 0, 'uom': 78, 'name': 'Power'},
+        {'driver': 'GV1', 'value': 0, 'uom': 56, 'name': 'Dim Level'},
+    ]
 
     id = "MQDIMMER"
-    hint = [4, 2, 0, 0]
+    hint = [2, 9, 0, 0]
     commands = {"QUERY": query, "DON": set_on, "DOF": set_off, "BRT": brighten, "DIM": dim}
 
 
@@ -844,8 +863,6 @@ class ShellyFlood(udi_interface.Node):
 
 
 # General purpose Analog input using ADC.
-# Setting max value in editor.xml as 1024, as that would be the max for
-# onboard ADC, but that might need to be changed for external ADCs.
 class MQAnalog(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
@@ -1056,7 +1073,7 @@ class MQRGBWstrip(udi_interface.Node):
 if __name__ == "__main__":
     try:
         polyglot = udi_interface.Interface([])
-        polyglot.start()
+        polyglot.start(VERSION)
         Controller(polyglot, 'mqctrl', 'mqctrl', 'MQTT')
         polyglot.runForever()
     except (KeyboardInterrupt, SystemExit):
