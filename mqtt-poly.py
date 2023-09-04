@@ -186,6 +186,10 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQDimmer(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/RESULT'
+                    LOGGER.info(f'Adding {extra_status_topic}')
+                    self._add_status_topics(dev,[extra_status_topic])
+                    LOGGER.info("ADDED {} {} /RESULT".format(dev["type"], name))
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
