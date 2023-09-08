@@ -368,7 +368,7 @@ class MQDimmer(udi_interface.Node):
             self.reportCmd("DOF")
             self.setDriver('ST', 0)
         self.dimmer = dimmer
-        self.setDriver("GV1", self.dimmer)
+        self.setDriver('ST', self.dimmer)
 
     def set_on(self, command):
         try:
@@ -379,39 +379,31 @@ class MQDimmer(udi_interface.Node):
         except Exception as ex:
             LOGGER.error(f"Unexpected Dim-Value {ex}, turning OFF")
             self.dimmer = 0
-        self.setDriver("GV1", self.dimmer)
-        self.setDriver('ST', 100)
+        self.setDriver('ST', self.dimmer)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
 
     def set_off(self, command):
-        self.setDriver("GV1", self.dimmer)
-        self.setDriver('ST', 0)
+        self.setDriver('ST', self.dimmer)
         self.controller.mqtt_pub(self.cmd_topic, 0)
 
     def brighten(self, command):
         if self.dimmer <= 90:
             self.dimmer += 10
             self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
-            self.setDriver("GV1", self.dimmer)
-            self.setDriver('ST', 100)
+            self.setDriver('ST', self.dimmer)
 
     def dim(self, command):
         if self.dimmer >= 10:
             self.dimmer -= 10
             self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
-            if self.dimmer == 0:
-                self.setDriver('ST', 0)
-            self.setDriver("GV1", self.dimmer)
+            self.setDriver('ST', self.dimmer)
 
     def query(self, command=None):
         query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/State'
         self.controller.mqtt_pub(query_topic, "")
         self.reportDrivers()
 
-    drivers = [
-        {'driver': 'ST', 'value': 0, 'uom': 78, 'name': 'Power'},
-        {'driver': 'GV1', 'value': 0, 'uom': 51, 'name': 'Dim Level'},
-    ]
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 51, 'name': 'Status'}]
 
     id = "MQDIMMER"
     hint = [1, 2, 9, 0]
