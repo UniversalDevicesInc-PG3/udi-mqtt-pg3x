@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.14'
+VERSION = '0.0.15'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
@@ -372,9 +372,12 @@ class MQDimmer(udi_interface.Node):
 
     def set_on(self, command):
         try:
-            self.dimmer = int(command.get('value'))
+            if command.get('value') is not None:
+                self.dimmer = int(command.get('value'))
+            else:
+                self.dimmer = 100
         except Exception as ex:
-            LOGGER.info(f"Unexpected Dim-Value {ex}, turning OFF")
+            LOGGER.error(f"Unexpected Dim-Value {ex}, turning OFF")
             self.dimmer = 0
         self.setDriver("GV1", self.dimmer)
         self.setDriver('ST', 100)
