@@ -266,7 +266,7 @@ class Controller(udi_interface.Node):
         LOGGER.debug("Received {} from {}".format(payload, topic))
         try:
             self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
-            # LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
+            LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
@@ -349,23 +349,23 @@ class MQDimmer(udi_interface.Node):
         self.dimmer = 0
 
     def updateInfo(self, payload, topic: str):
+        power = ''
+        dimmer = ''
         try:
             data = json.loads(payload)
             if 'Dimmer' in data:
                 dimmer = int(data['Dimmer'])
             if 'POWER' in data:
                 power = data['POWER']
-            # LOGGER.info("Dimmer = {} , Power = {}".format(dimmer, power))
+            LOGGER.info("Dimmer = {} , Power = {}".format(dimmer, power))
         except Exception as ex:
             LOGGER.error(f"Could not decode payload {payload}: {ex}")
             return False
         if power == 'ON' or (self.dimmer == 0 and dimmer > 0):
             self.reportCmd("DON")
-            self.on = True
             self.setDriver('ST', 100)
         if power == 'OFF' or (self.dimmer > 0 and dimmer == 0):
             self.reportCmd("DOF")
-            self.on = False
             self.setDriver('ST', 0)
         self.dimmer = dimmer
         self.setDriver("GV1", self.dimmer)
@@ -374,29 +374,28 @@ class MQDimmer(udi_interface.Node):
         try:
             self.dimmer = int(command.get('value'))
         except Exception as ex:
-            LOGGER.info(f"Unexpected Dimmer Value {ex}, turning OFF")
+            LOGGER.info(f"Unexpected Dim-Value {ex}, turning OFF")
             self.dimmer = 0
         self.setDriver("GV1", self.dimmer)
         self.setDriver('ST', 100)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
 
     def set_off(self, command):
-        self.dimmer = 0
         self.setDriver("GV1", self.dimmer)
         self.setDriver('ST', 0)
-        self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
+        self.controller.mqtt_pub(self.cmd_topic, 0)
 
     def brighten(self, command):
         if self.dimmer <= 90:
-            self.controller.mqtt_pub(self.cmd_topic, "+")
             self.dimmer += 10
+            self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
             self.setDriver("GV1", self.dimmer)
             self.setDriver('ST', 100)
 
     def dim(self, command):
         if self.dimmer >= 10:
-            self.controller.mqtt_pub(self.cmd_topic, "-")
             self.dimmer -= 10
+            self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
             if self.dimmer == 0:
                 self.setDriver('ST', 0)
             self.setDriver("GV1", self.dimmer)
@@ -408,11 +407,11 @@ class MQDimmer(udi_interface.Node):
 
     drivers = [
         {'driver': 'ST', 'value': 0, 'uom': 78, 'name': 'Power'},
-        {'driver': 'GV1', 'value': 0, 'uom': 56, 'name': 'Dim Level'},
+        {'driver': 'GV1', 'value': 0, 'uom': 51, 'name': 'Dim Level'},
     ]
 
     id = "MQDIMMER"
-    hint = [2, 9, 0, 0]
+    hint = [1, 2, 9, 0]
     commands = {"QUERY": query, "DON": set_on, "DOF": set_off, "BRT": brighten, "DIM": dim}
 
 

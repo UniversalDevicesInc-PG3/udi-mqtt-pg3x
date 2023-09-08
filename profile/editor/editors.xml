@@ -51,9 +51,9 @@
         <range uom="25" subset="0-3" nls="FANSPEED" />
     </editor>
     <editor id="BATTERY">
-        <range uom="51" min="0" max="100" prec="0" />
+        <range uom="51" min="0" max="100"  prec="0" />
     </editor>
         <editor id="ST_DIMMER">
-        <range uom="56" subset="0-100" prec="0" />
+        <range uom="51" min="0" max="100" step="10" prec="0" />
     </editor>
 </editors>
