@@ -363,19 +363,16 @@ class MQDimmer(udi_interface.Node):
             return False
         if power == 'ON' or (self.dimmer == 0 and dimmer > 0):
             self.reportCmd("DON")
-            self.setDriver('ST', 100)
+            self.dimmer = dimmer
+            self.setDriver('ST', self.dimmer)
         if power == 'OFF' or (self.dimmer > 0 and dimmer == 0):
             self.reportCmd("DOF")
             self.setDriver('ST', 0)
-        self.dimmer = dimmer
-        self.setDriver('ST', self.dimmer)
 
     def set_on(self, command):
         try:
             if command.get('value') is not None:
                 self.dimmer = int(command.get('value'))
-            else:
-                self.dimmer = 100
         except Exception as ex:
             LOGGER.error(f"Unexpected Dim-Value {ex}, turning OFF")
             self.dimmer = 0
