@@ -265,8 +265,9 @@ class Controller(udi_interface.Node):
         payload = message.payload.decode("utf-8")
         LOGGER.debug("Received {} from {}".format(payload, topic))
         try:
-            self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
+            # if self._dev_by_topic(topic) is not None:
             LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
+            self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
@@ -355,6 +356,8 @@ class MQDimmer(udi_interface.Node):
             data = json.loads(payload)
             if 'Dimmer' in data:
                 dimmer = int(data['Dimmer'])
+            else:
+                dimmer = self.dimmer
             if 'POWER' in data:
                 power = data['POWER']
             LOGGER.info("Dimmer = {} , Power = {}".format(dimmer, power))
@@ -374,8 +377,10 @@ class MQDimmer(udi_interface.Node):
             if command.get('value') is not None:
                 self.dimmer = int(command.get('value'))
         except Exception as ex:
-            LOGGER.error(f"Unexpected Dim-Value {ex}, turning OFF")
-            self.dimmer = 0
+            LOGGER.error(f"Unexpected Dim-Value {ex}, turning to 50%")
+            self.dimmer = 50
+        if self.dimmer == 0:
+            self.dimmer = 50
         self.setDriver('ST', self.dimmer)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
 
@@ -386,14 +391,18 @@ class MQDimmer(udi_interface.Node):
     def brighten(self, command):
         if self.dimmer <= 90:
             self.dimmer += 10
-            self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
-            self.setDriver('ST', self.dimmer)
+        else:
+            self.dimmer = 100
+        self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
+        self.setDriver('ST', self.dimmer)
 
     def dim(self, command):
         if self.dimmer >= 10:
             self.dimmer -= 10
-            self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
-            self.setDriver('ST', self.dimmer)
+        else:
+            self.dimmer = 0
+        self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
+        self.setDriver('ST', self.dimmer)
 
     def query(self, command=None):
         query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/State'
@@ -403,7 +412,7 @@ class MQDimmer(udi_interface.Node):
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 51, 'name': 'Status'}]
 
     id = "MQDIMMER"
-    hint = [1, 2, 9, 0]
+    hint = [4, 17, 0, 0]
     commands = {"QUERY": query, "DON": set_on, "DOF": set_off, "BRT": brighten, "DIM": dim}
 
 
