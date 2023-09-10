@@ -5,7 +5,7 @@
 This Poly provides an interface between MQTT broker and Polyglot v3 server.
 
 ### Installation instructions
-You can install NodeServer from the Polyglot store or manually running
+You can install the Node Server from the Polyglot store or manually running
 ```
 cd ~/.polyglot/nodeservers
 git clone https://github.com/Trilife/udi-mqtt-pg3x.git MQTT
