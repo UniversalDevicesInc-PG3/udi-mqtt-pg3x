@@ -16,7 +16,7 @@ cd MQTT
 ### Notes
 
 This BETA version has added a DIMMER module and expanded ANALOG to include A0, Temperature, Illuminance, Range, pH and MQX. "Query" may not work!
-
+Note: The dimmer uses hint = [4,17,0,0] to emulate a ZWave dimmer in Google Home commands
 Please report any problems on the UDI user forum.
 
 Thanks and good luck.
