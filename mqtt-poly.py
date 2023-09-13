@@ -412,7 +412,7 @@ class MQDimmer(udi_interface.Node):
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 51, 'name': 'Status'}]
 
     id = "MQDIMMER"
-    hint = [4, 17, 0, 0]
+    hint = [4, 17, 0, 0]  # Using Zwave hint for Google Home
     commands = {"QUERY": query, "DON": set_on, "DOF": set_off, "BRT": brighten, "DIM": dim}
 
 
