@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.16'
+VERSION = '0.0.17'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
