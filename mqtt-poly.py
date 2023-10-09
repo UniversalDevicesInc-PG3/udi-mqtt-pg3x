@@ -412,7 +412,7 @@ class MQDimmer(udi_interface.Node):
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 51, 'name': 'Status'}]
 
     id = "MQDIMMER"
-    hint = [2, 9, 0, 0]
+    hint = [1,2,9,0]
     commands = {"QUERY": query, "DON": set_on, "DOF": set_off, "BRT": brighten, "DIM": dim}
 
 
