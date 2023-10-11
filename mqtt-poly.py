@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import udi_interface
 import sys
-import logging
+# import logging
 import paho.mqtt.client as mqtt
 import json
 import yaml
@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.18'
+VERSION = '0.0.19'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
@@ -412,7 +412,7 @@ class MQDimmer(udi_interface.Node):
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 51, 'name': 'Status'}]
 
     id = "MQDIMMER"
-    hint = [4,17,0,0]
+    hint = [1,2,9,0]
     commands = {"QUERY": query, "DON": set_on, "DOF": set_off, "BRT": brighten, "DIM": dim}
 
 
