@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.20'
+VERSION = '0.0.22'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
@@ -377,16 +377,14 @@ class MQDimmer(udi_interface.Node):
             if command.get('value') is not None:
                 self.dimmer = int(command.get('value'))
         except Exception as ex:
-            LOGGER.error(f"Unexpected Dim-Value {ex}, turning to 50%")
-            self.dimmer = 50
+            LOGGER.error(f"Unexpected Dim-Value {ex}, turning to 10%")
+            self.dimmer = 10
         if self.dimmer == 0:
-            self.dimmer = 50
+            self.dimmer = 10
         self.setDriver('ST', self.dimmer)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
-
     def set_off(self, command):
         self.setDriver('ST', self.dimmer)
-        self.controller.mqtt_pub(self.cmd_topic, 0)
 
     def brighten(self, command):
         if self.dimmer <= 90:
