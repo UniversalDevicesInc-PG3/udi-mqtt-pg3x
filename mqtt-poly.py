@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.20'
+VERSION = '0.0.21'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
@@ -347,6 +347,7 @@ class MQDimmer(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
+        self.power_topic = self.cmd_topic.rsplit('/', 1)[0] + '/power'
         self.dimmer = 0
 
     def updateInfo(self, payload, topic: str):
@@ -383,11 +384,10 @@ class MQDimmer(udi_interface.Node):
             self.dimmer = 10
         self.setDriver('ST', self.dimmer)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
-
+        self.controller.mqtt_pub(self.power_topic, "ON")
     def set_off(self, command):
         self.setDriver('ST', self.dimmer)
-        power_topic = self.cmd_topic.rsplit('/', 1)[0] + '/power'
-        self.controller.mqtt_pub(power_topic, "OFF")
+        self.controller.mqtt_pub(self.power_topic, "OFF")
 
     def brighten(self, command):
         if self.dimmer <= 90:
