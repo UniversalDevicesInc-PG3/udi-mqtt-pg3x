@@ -377,16 +377,17 @@ class MQDimmer(udi_interface.Node):
             if command.get('value') is not None:
                 self.dimmer = int(command.get('value'))
         except Exception as ex:
-            LOGGER.error(f"Unexpected Dim-Value {ex}, turning to 50%")
-            self.dimmer = 50
+            LOGGER.error(f"Unexpected Dim-Value {ex}, turning to 10%")
+            self.dimmer = 10
         if self.dimmer == 0:
-            self.dimmer = 50
+            self.dimmer = 10
         self.setDriver('ST', self.dimmer)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
 
     def set_off(self, command):
         self.setDriver('ST', self.dimmer)
-        self.controller.mqtt_pub(self.cmd_topic, 0)
+        power_topic = self.cmd_topic.rsplit('/', 1)[0] + '/power'
+        self.controller.mqtt_pub(power_topic, "OFF")
 
     def brighten(self, command):
         if self.dimmer <= 90:
