@@ -384,6 +384,7 @@ class MQDimmer(udi_interface.Node):
         self.setDriver('ST', self.dimmer)
         self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
     def set_off(self, command):
+        self.controller.mqtt_pub(self.cmd_topic, 0)
         self.setDriver('ST', self.dimmer)
 
     def brighten(self, command):
