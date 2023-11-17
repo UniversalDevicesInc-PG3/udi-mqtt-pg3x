@@ -161,6 +161,11 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQAnalog(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
+                    extra_status_topic = extra_status_topic.replace('tele/', 'stat/')
+                    LOGGER.info(f'Adding {extra_status_topic}')
+                    self._add_status_topics(dev, [extra_status_topic])
+                    LOGGER.info("ADDED {} {} /STATUS10".format(dev["type"], name))
             elif dev["type"] == "s31":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -347,6 +352,7 @@ class MQDimmer(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
+        self.status_topic = device['status_topic']
         self.dimmer = 0
 
     def updateInfo(self, payload, topic: str):
@@ -406,6 +412,7 @@ class MQDimmer(udi_interface.Node):
     def query(self, command=None):
         query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/State'
         self.controller.mqtt_pub(query_topic, "")
+        LOGGER.info("STATUS_TOPIC = {}".format(self.status_topic))
         self.reportDrivers()
 
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 51, 'name': 'Status'}]
@@ -882,6 +889,10 @@ class MQAnalog(udi_interface.Node):
                 "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
             )
             return False
+        #
+        if 'StatusSNS' in data:
+            data = data['StatusSNS']
+            #
         if "ANALOG" in data:
             self.setDriver("ST", 1)
             if "A0" in data["ANALOG"]:
@@ -903,7 +914,8 @@ class MQAnalog(udi_interface.Node):
             self.setDriver("GPV", 0)
 
     def query(self, command=None):
-        self.controller.mqtt_pub(self.cmd_topic, "10")
+        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        self.controller.mqtt_pub(query_topic, " 10")
         self.reportDrivers()
 
     # GPV = "General Purpose Value"
