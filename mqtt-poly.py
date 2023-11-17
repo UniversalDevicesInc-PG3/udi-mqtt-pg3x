@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.22'
+VERSION = '0.0.23'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
@@ -165,7 +165,6 @@ class Controller(udi_interface.Node):
                     extra_status_topic = extra_status_topic.replace('tele/', 'stat/')
                     LOGGER.info(f'Adding {extra_status_topic}')
                     self._add_status_topics(dev, [extra_status_topic])
-                    LOGGER.info("ADDED {} {} /STATUS10".format(dev["type"], name))
             elif dev["type"] == "s31":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
