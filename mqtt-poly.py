@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.23'
+VERSION = '0.0.24'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
@@ -894,6 +894,13 @@ class MQAnalog(udi_interface.Node):
             #
         if "ANALOG" in data:
             self.setDriver("ST", 1)
+            port_index = 0
+            for key in data['ANALOG']:
+                label = 'GV' + str(port_index)
+                self.setDriver(label, data["ANALOG"][key])
+                port_index += 1
+                LOGGER.debug(f'KEY{port_index} = {key}')
+            '''
             if "A0" in data["ANALOG"]:
                 self.setDriver("GPV", data["ANALOG"]["A0"])
             elif "Range" in data["ANALOG"]:
@@ -908,9 +915,13 @@ class MQAnalog(udi_interface.Node):
                 self.setDriver("GPV", data["ANALOG"]["MQ2_0"])
             else:
                 LOGGER.warn(f"Unable to handle data for topic {topic}")
+                '''
         else:
             self.setDriver("ST", 0)
-            self.setDriver("GPV", 0)
+            self.setDriver("GV0", 0)
+            self.setDriver("GV1", 0)
+            self.setDriver("GV2", 0)
+            self.setDriver("GV3", 0)
 
     def query(self, command=None):
         query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
@@ -921,7 +932,10 @@ class MQAnalog(udi_interface.Node):
     # UOM:56 = "The raw value reported by device"
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "Analog ST"},
-        {"driver": "GPV", "value": 0, "uom": 56, "name": "Analog IN"},
+        {"driver": "GV0", "value": 0, "uom": 56, "name": "Analog1"},
+        {"driver": "GV1", "value": 0, "uom": 56, "name": "Analog2"},
+        {"driver": "GV2", "value": 0, "uom": 56, "name": "Analog3"},
+        {"driver": "GV3", "value": 0, "uom": 56, "name": "Analog4"},
     ]
 
     id = "MQANAL"
