@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.24'
+VERSION = '0.0.25'
 
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
@@ -141,11 +141,19 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQdht(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
+                    extra_status_topic = extra_status_topic.replace('tele/', 'stat/')
+                    LOGGER.info(f'Adding {extra_status_topic}')
+                    self._add_status_topics(dev, [extra_status_topic])
             elif dev["type"] == "Temp":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQds(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
+                    extra_status_topic = extra_status_topic.replace('tele/', 'stat/')
+                    LOGGER.info(f'Adding {extra_status_topic}')
+                    self._add_status_topics(dev, [extra_status_topic])
             elif dev["type"] == "TempHumidPress":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -670,6 +678,8 @@ class MQFlag(udi_interface.Node):
 class MQdht(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
+        self.cmd_topic = device["cmd_topic"]
         self.on = False
 
     def updateInfo(self, payload, topic: str):
@@ -688,6 +698,8 @@ class MQdht(udi_interface.Node):
             self.setDriver("ST", 0)
 
     def query(self, command=None):
+        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        self.controller.mqtt_pub(query_topic, " 10")
         self.reportDrivers()
 
     drivers = [
@@ -706,6 +718,8 @@ class MQdht(udi_interface.Node):
 class MQds(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
+        self.cmd_topic = device["cmd_topic"]
         self.on = False
 
     def start(self):
@@ -726,6 +740,8 @@ class MQds(udi_interface.Node):
             self.setDriver("ST", 0)
 
     def query(self, command=None):
+        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        self.controller.mqtt_pub(query_topic, " 10")
         self.reportDrivers()
 
     drivers = [
