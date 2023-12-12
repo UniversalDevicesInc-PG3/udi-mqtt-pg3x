@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.26'
+VERSION = '0.0.27'
 
 
 class Controller(udi_interface.Node):
@@ -115,7 +115,7 @@ class Controller(udi_interface.Node):
                 name = dev["name"]
             else:
                 name = dev["id"]        # if there is no 'friendly name' use the ID instead
-            address = Controller._get_device_address(dev)
+            address = Controller._format_device_address(dev)
             LOGGER.debug(f'DEVXLIST:{dev}')
             if dev["type"] == "shellyflood":
                 if not self.poly.getNode(address):
@@ -200,6 +200,7 @@ class Controller(udi_interface.Node):
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
+        LOGGER.debug(f'DEVYLIST: {self.devlist}')
 
         return True
 
@@ -229,7 +230,9 @@ class Controller(udi_interface.Node):
     def _add_status_topics(self, dev, status_topics: List[str]):
         for status_topic in status_topics:
             self.status_topics.append(status_topic)
-            self.status_topics_to_devices[status_topic] = Controller._get_device_address(dev)
+            self.status_topics_to_devices[status_topic] = Controller._format_device_address(dev) # should be keyed to `id` instead of `status_topic`
+            #LOGGER.debug(f'++++++++++STTD: {self.status_topics_to_devices[status_topic]}')
+            #LOGGER.debug(f'++++++++++STTD: {self.status_topics_to_devices}')
 
     def _on_connect(self, mqttc, userdata, flags, rc):
         if rc == 0:
@@ -270,29 +273,60 @@ class Controller(udi_interface.Node):
     def _on_message(self, mqttc, userdata, message):
         topic = message.topic
         payload = message.payload.decode("utf-8")
+        data = json.loads(payload)
         LOGGER.debug("Received _on_message {} from {}".format(payload, topic))
+        LOGGER.debug(f'PrTD: {data}')
         try:
+            if 'StatusSNS' in data:
+                data = data['StatusSNS']
+                LOGGER.debug(f'PoTD: {data}')
             # if self._dev_by_topic(topic) is not None:
-            LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
-            self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
+            if len(data['ANALOG']) != 1:    # multiple ANALOG sensors
+                LOGGER.info('MULTIPLE Payload = {}, Topic = {}'.format(payload, topic))
+                LOGGER.info('MULTIPLE Pata = {}, Topic = {}'.format(data, topic))
+                sensor_count = 0
+                for sensor, sensor_reading in data['ANALOG'].items():
+                    sensor_count += 1
+                    LOGGER.debug(f'_OM: {sensor}: {sensor_reading}, {sensor_count} ')
+                    self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+            else:   # only one ANALOG Sensor
+                LOGGER.info('SINGLE Payload = {}, Topic = {}'.format(payload, topic))
+                self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
     def _dev_by_topic(self, topic):
+        LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
         return self.status_topics_to_devices.get(topic, None)
 
+    def _get_device_address_from_sensor_id(self, topic, sensor_id):
+        LOGGER.debug(f'GDA1: {topic}  {sensor_id}')
+        LOGGER.debug(f'DLT: {self.devlist}')
+        self.node_id = None
+        for device in self.devlist:
+            LOGGER.debug(f'GDA2: {device}')
+            LOGGER.debug(f'DLT: {self.devlist}')
+            if topic.rsplit('/')[1] in device['status_topic'] and sensor_id in device['sensor_id']:
+                self.node_id = device['id'].lower().replace("_", "").replace("-", "_")[:14]
+                LOGGER.debug(f'NODID: {self.node_id}, {topic}, {sensor_id}')
+                break
+        LOGGER.debug(f'NODID2: {self.node_id}')
+        return self.node_id  # .lower().replace("_", "").replace("-", "_")[:14]
+
+
+
     @staticmethod
-    def _get_device_address(dev) -> str:
+    def _format_device_address(dev) -> str:
         return dev["id"].lower().replace("_", "").replace("-", "_")[:14]
 
     def mqtt_pub(self, topic, message):
         self.mqttc.publish(topic, message, retain=False)
 
     def stop(self):
-        if self.mqttc is None:
-            return
-        self.mqttc.loop_stop()
-        self.mqttc.disconnect()
+        if self.mqttc is not None:
+            self.mqttc.loop_stop()
+            self.mqttc.disconnect()
+        self.poly.stop()
         LOGGER.info("MQTT is stopping")
 
     def query(self, command=None):
