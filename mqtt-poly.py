@@ -62,29 +62,19 @@ class Controller(udi_interface.Node):
             try:
                 f = open(self.Parameters["devfile"])
             except Exception as ex:
-                LOGGER.error(
-                    "Failed to open {}: {}".format(
-                        self.Parameters["devfile"], ex
-                    )
-                )
+                LOGGER.error("Failed to open {}: {}".format(self.Parameters["devfile"], ex))
                 return False
             try:
                 dev_yaml = yaml.safe_load(f.read())     # upload devfile into data
                 f.close()
             except Exception as ex:
                 LOGGER.error(
-                    "Failed to parse {} content: {}".format(
-                        self.Parameters["devfile"], ex
-                    )
-                )
+                    "Failed to parse {} content: {}".format(self.Parameters["devfile"], ex))
                 return False
 
             if "devices" not in dev_yaml:
                 LOGGER.error(
-                    "Manual discovery file {} is missing bulbs section".format(
-                        self.Parameters["devfile"]
-                    )
-                )
+                    "Manual discovery file {} is missing bulbs section".format(self.Parameters["devfile"]))
                 return False
             self.devlist = dev_yaml["devices"]  # transfer devfile into devlist
 
