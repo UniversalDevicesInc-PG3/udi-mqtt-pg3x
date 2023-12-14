@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.27'
+VERSION = '0.0.28'
 
 
 class Controller(udi_interface.Node):
@@ -69,7 +69,7 @@ class Controller(udi_interface.Node):
                 )
                 return False
             try:
-                data = yaml.safe_load(f.read())     # upload devfile into data
+                dev_yaml = yaml.safe_load(f.read())     # upload devfile into data
                 f.close()
             except Exception as ex:
                 LOGGER.error(
@@ -79,14 +79,14 @@ class Controller(udi_interface.Node):
                 )
                 return False
 
-            if "devices" not in data:
+            if "devices" not in dev_yaml:
                 LOGGER.error(
                     "Manual discovery file {} is missing bulbs section".format(
                         self.Parameters["devfile"]
                     )
                 )
                 return False
-            self.devlist = data["devices"]  # transfer devfile into devlist
+            self.devlist = dev_yaml["devices"]  # transfer devfile into devlist
 
         # upload the device topic from the Node Server Configuration Page
         elif self.Parameters["devlist"] is not None:
@@ -116,7 +116,6 @@ class Controller(udi_interface.Node):
             else:
                 name = dev["id"]        # if there is no 'friendly name' use the ID instead
             address = Controller._format_device_address(dev)
-            LOGGER.debug(f'DEVXLIST:{dev}')
             if dev["type"] == "shellyflood":
                 if not self.poly.getNode(address):
                     LOGGER.info(f"Adding {dev['type']} {name}")
@@ -165,9 +164,9 @@ class Controller(udi_interface.Node):
                     self._add_status_topics(dev, [dev["status_topic"]])
                     # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
                     extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
-                    extra_status_topic = extra_status_topic.replace('tele/', 'stat/')
-                    LOGGER.info(f'Adding EXTRA {extra_status_topic} for {name}')
-                    self._add_status_topics(dev, [extra_status_topic])
+                    dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
+                    LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
+                    self._add_status_topics(dev, [dev['extra_status_topic']])
             elif dev["type"] == "s31":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -193,9 +192,9 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQDimmer(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
-                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/RESULT'
-                    LOGGER.info(f'Adding {extra_status_topic}')
-                    self._add_status_topics(dev, [extra_status_topic])
+                    dev['extra_status_topic'] = dev['status_topic'].rsplit('/', 1)[0] + '/RESULT'
+                    LOGGER.info(f'Adding {dev["extra_status_topic"]}')
+                    self._add_status_topics(dev, [dev['extra_status_topic']])
                     LOGGER.info("ADDED {} {} /RESULT".format(dev["type"], name))
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
@@ -275,23 +274,21 @@ class Controller(udi_interface.Node):
         payload = message.payload.decode("utf-8")
         data = json.loads(payload)
         LOGGER.debug("Received _on_message {} from {}".format(payload, topic))
-        LOGGER.debug(f'PrTD: {data}')
         try:
             if 'StatusSNS' in data:
                 data = data['StatusSNS']
                 LOGGER.debug(f'PoTD: {data}')
-            # if self._dev_by_topic(topic) is not None:
-            if len(data['ANALOG']) != 1:    # multiple ANALOG sensors
-                LOGGER.info('MULTIPLE Payload = {}, Topic = {}'.format(payload, topic))
-                LOGGER.info('MULTIPLE Pata = {}, Topic = {}'.format(data, topic))
-                sensor_count = 0
+            if 'ANALOG' in data.keys():
+                LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
                 for sensor, sensor_reading in data['ANALOG'].items():
-                    sensor_count += 1
-                    LOGGER.debug(f'_OM: {sensor}: {sensor_reading}, {sensor_count} ')
+                    LOGGER.debug(f'_OM: {sensor}: {sensor_reading}')
                     self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-            else:   # only one ANALOG Sensor
-                LOGGER.info('SINGLE Payload = {}, Topic = {}'.format(payload, topic))
-                self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
+            for sensor in [sensor for sensor in data.keys() if 'DS18B20' in sensor]:
+                LOGGER.debug(f'_ODS: {sensor}')
+                self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+            for sensor in [sensor for sensor in data.keys() if 'AM2301' in sensor]:
+                LOGGER.debug(f'_OAM: {sensor}')
+                self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
@@ -305,13 +302,12 @@ class Controller(udi_interface.Node):
         self.node_id = None
         for device in self.devlist:
             LOGGER.debug(f'GDA2: {device}')
-            LOGGER.debug(f'DLT: {self.devlist}')
             if topic.rsplit('/')[1] in device['status_topic'] and sensor_id in device['sensor_id']:
                 self.node_id = device['id'].lower().replace("_", "").replace("-", "_")[:14]
                 LOGGER.debug(f'NODID: {self.node_id}, {topic}, {sensor_id}')
                 break
         LOGGER.debug(f'NODID2: {self.node_id}')
-        return self.node_id  # .lower().replace("_", "").replace("-", "_")[:14]
+        return self.node_id
 
 
 
@@ -744,6 +740,15 @@ class MQdht(udi_interface.Node):
 class MQds(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
+        LOGGER.debug(f'DEVCLASS: {device} ')
+        self.cmd_topic = device["cmd_topic"]
+        if 'sensor_id' in device:
+            self.sensor_id = device['sensor_id']
+        else:
+            self.sensor_id = 'SINGLE_SENSOR'
+            device['sensor_id'] = self.sensor_id
+        LOGGER.debug(f'CMD_ID {self.sensor_id}, {self.cmd_topic}')
         self.on = False
 
     def start(self):
@@ -757,13 +762,23 @@ class MQds(udi_interface.Node):
                 "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
             )
             return False
-        if "DS18B20" in data:
+        LOGGER.debug(f'YYY {self.sensor_id}, {data} ')
+        if 'StatusSNS' in data:
+            data = data['StatusSNS']
+        # if "DS18B20" in data:
+        if self.sensor_id in data:
             self.setDriver("ST", 1)
-            self.setDriver("CLITEMP", data["DS18B20"]["Temperature"])
+            # self.setDriver("CLITEMP", data["DS18B20"]["Temperature"])
+            self.setDriver("CLITEMP", data[self.sensor_id]["Temperature"])
         else:
             self.setDriver("ST", 0)
+            self.setDriver("GPV", 0)
 
     def query(self, command=None):
+        LOGGER.debug(f'QUERY: {self.sensor_id}')
+        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        LOGGER.debug(f'QT: {query_topic}')
+        self.controller.mqtt_pub(query_topic, " 10")
         self.reportDrivers()
 
     drivers = [
@@ -915,7 +930,6 @@ class MQAnalog(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        LOGGER.debug(f'DEVCLASS: {device} ')
         self.cmd_topic = device["cmd_topic"]
         if 'sensor_id' in device:
             self.sensor_id = device['sensor_id']
@@ -931,7 +945,6 @@ class MQAnalog(udi_interface.Node):
         except Exception as ex:
             LOGGER.error("Failed to parse MQTT Payload as Json: {} {}".format(ex, payload))
             return False
-        #
         LOGGER.debug(f'XXX {self.sensor_id}, {data} ')
         if 'StatusSNS' in data:
             data = data['StatusSNS']
@@ -941,9 +954,9 @@ class MQAnalog(udi_interface.Node):
             LOGGER.debug(f'sensor_id UpdateInfo: {self.sensor_id}')
             if self.sensor_id is not 'SINGLE_SENSOR':
                 self.setDriver("GPV", data["ANALOG"][self.sensor_id])
-                LOGGER.info(f'multiple analog {self.sensor_id}:  {data["ANALOG"][self.sensor_id]}')
+                LOGGER.info(f'M-analog {self.sensor_id}:  {data["ANALOG"][self.sensor_id]}')
             else:
-                for key, value in data['ANALOG'].items():
+                for key, value in data['ANALOG'].items():   # look for the ONLY reading inside 'ANALOG'
                     LOGGER.info(f'single analog {key}: {value}')
                     self.setDriver("GPV", value)
         else:
@@ -954,6 +967,7 @@ class MQAnalog(udi_interface.Node):
     def query(self, command=None):
         LOGGER.debug(f'QUERY: {self.sensor_id}')
         query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        LOGGER.debug(f'QT: {query_topic}')
         self.controller.mqtt_pub(query_topic, " 10")
         self.reportDrivers()
 
