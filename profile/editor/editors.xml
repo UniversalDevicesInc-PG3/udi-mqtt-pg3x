@@ -11,6 +11,9 @@
     <editor id="HUM">
         <range uom="22" min="0" max="100" prec="2" />
     </editor>
+    <editor id="DEWF">
+        <range uom="17" min="-40" max="176" prec="2" />
+    </editor>
     <editor id="PRESS">
 	    <range uom="23" min="0" max="40" prec="2" />
     </editor>
@@ -56,4 +59,5 @@
         <editor id="ST_DIMMER">
         <range uom="51" min="0" max="100" step="10" prec="0" />
     </editor>
+
 </editors>

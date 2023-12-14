@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.28'
+VERSION = '0.0.29'
 
 
 class Controller(udi_interface.Node):
@@ -142,11 +142,21 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQdht(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
+                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
+                    dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
+                    LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
+                    self._add_status_topics(dev, [dev['extra_status_topic']])
             elif dev["type"] == "Temp":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQds(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
+                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
+                    dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
+                    LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
+                    self._add_status_topics(dev, [dev['extra_status_topic']])
             elif dev["type"] == "TempHumidPress":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -277,17 +287,16 @@ class Controller(udi_interface.Node):
         try:
             if 'StatusSNS' in data:
                 data = data['StatusSNS']
-                LOGGER.debug(f'PoTD: {data}')
             if 'ANALOG' in data.keys():
                 LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
-                for sensor, sensor_reading in data['ANALOG'].items():
-                    LOGGER.debug(f'_OM: {sensor}: {sensor_reading}')
+                for sensor in data['ANALOG']:
+                    LOGGER.info(f'_OA: {sensor}')
                     self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
             for sensor in [sensor for sensor in data.keys() if 'DS18B20' in sensor]:
-                LOGGER.debug(f'_ODS: {sensor}')
+                LOGGER.info(f'_ODS: {sensor}')
                 self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
             for sensor in [sensor for sensor in data.keys() if 'AM2301' in sensor]:
-                LOGGER.debug(f'_OAM: {sensor}')
+                LOGGER.info(f'_OAM: {sensor}')
                 self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
@@ -704,30 +713,48 @@ class MQFlag(udi_interface.Node):
 class MQdht(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
+        LOGGER.debug(f'DEVCLASS: {device} ')
+        self.cmd_topic = device["cmd_topic"]
+        if 'sensor_id' in device:
+            self.sensor_id = device['sensor_id']
+        else:
+            self.sensor_id = 'SINGLE_SENSOR'
+            device['sensor_id'] = self.sensor_id
+        LOGGER.debug(f'CMD_ID {self.sensor_id}, {self.cmd_topic}')
         self.on = False
 
     def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
-            LOGGER.error(
-                "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
-            )
+            LOGGER.error("Failed to parse MQTT Payload as Json: {} {}".format(ex, payload))
             return False
-        if "AM2301" in data:
+        LOGGER.debug(f'ZZZ {self.sensor_id}, {data} ')
+        if 'StatusSNS' in data:
+            data = data['StatusSNS']
+        if self.sensor_id in data:
             self.setDriver("ST", 1)
-            self.setDriver("CLITEMP", data["AM2301"]["Temperature"])
-            self.setDriver("CLIHUM", data["AM2301"]["Humidity"])
+            self.setDriver("ERR", 0)
+            self.setDriver("CLITEMP", data[self.sensor_id]["Temperature"])
+            self.setDriver("CLIHUM", data[self.sensor_id]["Humidity"])
+            self.setDriver("DEWPT", data[self.sensor_id]["DewPoint"])
         else:
             self.setDriver("ST", 0)
-
+            self.setDriver("ERR", 1)
     def query(self, command=None):
+        LOGGER.debug(f'QUERY: {self.sensor_id}')
+        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        LOGGER.debug(f'QT: {query_topic}')
+        self.controller.mqtt_pub(query_topic, " 10")
         self.reportDrivers()
 
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "CLITEMP", "value": 0, "uom": 17},
         {"driver": "CLIHUM", "value": 0, "uom": 22},
+        {"driver": "DEWPT", "value": 0, "uom": 17},
+        {"driver": "ERR", "value": 0, "uom": 2}
     ]
 
     id = "MQDHT"
@@ -758,17 +785,13 @@ class MQds(udi_interface.Node):
         try:
             data = json.loads(payload)
         except Exception as ex:
-            LOGGER.error(
-                "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
-            )
+            LOGGER.error("Failed to parse MQTT Payload as Json: {} {}".format(ex, payload))
             return False
         LOGGER.debug(f'YYY {self.sensor_id}, {data} ')
         if 'StatusSNS' in data:
             data = data['StatusSNS']
-        # if "DS18B20" in data:
         if self.sensor_id in data:
             self.setDriver("ST", 1)
-            # self.setDriver("CLITEMP", data["DS18B20"]["Temperature"])
             self.setDriver("CLITEMP", data[self.sensor_id]["Temperature"])
         else:
             self.setDriver("ST", 0)
