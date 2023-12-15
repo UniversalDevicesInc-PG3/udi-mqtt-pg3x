@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.29'
+VERSION = '0.0.30'
 
 
 class Controller(udi_interface.Node):
@@ -229,9 +229,8 @@ class Controller(udi_interface.Node):
     def _add_status_topics(self, dev, status_topics: List[str]):
         for status_topic in status_topics:
             self.status_topics.append(status_topic)
-            self.status_topics_to_devices[status_topic] = Controller._format_device_address(dev) # should be keyed to `id` instead of `status_topic`
-            #LOGGER.debug(f'++++++++++STTD: {self.status_topics_to_devices[status_topic]}')
-            #LOGGER.debug(f'++++++++++STTD: {self.status_topics_to_devices}')
+            self.status_topics_to_devices[status_topic] = Controller._format_device_address(dev)
+            # should be keyed to `id` instead of `status_topic`
 
     def _on_connect(self, mqttc, userdata, flags, rc):
         if rc == 0:
@@ -272,22 +271,31 @@ class Controller(udi_interface.Node):
     def _on_message(self, mqttc, userdata, message):
         topic = message.topic
         payload = message.payload.decode("utf-8")
-        data = json.loads(payload)
         LOGGER.debug("Received _on_message {} from {}".format(payload, topic))
         try:
-            if 'StatusSNS' in data:
-                data = data['StatusSNS']
-            if 'ANALOG' in data.keys():
-                LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
-                for sensor in data['ANALOG']:
-                    LOGGER.info(f'_OA: {sensor}')
-                    self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-            for sensor in [sensor for sensor in data.keys() if 'DS18B20' in sensor]:
-                LOGGER.info(f'_ODS: {sensor}')
-                self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-            for sensor in [sensor for sensor in data.keys() if 'AM2301' in sensor]:
-                LOGGER.info(f'_OAM: {sensor}')
-                self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+            try:
+                data = json.loads(payload)
+                if 'StatusSNS' in data:     # remove the StatusSNS wrapper, if present (from query)
+                    data = data['StatusSNS']
+                if 'ANALOG' in data.keys():
+                    LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
+                    for sensor in data['ANALOG']:
+                        LOGGER.info(f'_OA: {sensor}')
+                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+                elif 'DS18B20' in data.keys():
+                    for sensor in data.keys():
+                        LOGGER.info(f'_ODS: {sensor}')
+                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+                elif 'AM2301' in data.keys():
+                    for sensor in data.keys():
+                        LOGGER.info(f'_OAM: {sensor}')
+                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+                else:   # if it's anything else, process as usual
+                    LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
+                    self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
+            except json.decoder.JSONDecodeError:    # if it's not a JSON, process as usual
+                LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
+                self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
@@ -303,9 +311,9 @@ class Controller(udi_interface.Node):
             LOGGER.debug(f'GDA2: {device}')
             if topic.rsplit('/')[1] in device['status_topic'] and sensor_id in device['sensor_id']:
                 self.node_id = device['id'].lower().replace("_", "").replace("-", "_")[:14]
-                LOGGER.debug(f'NODID: {self.node_id}, {topic}, {sensor_id}')
+                LOGGER.debug(f'NODE_ID: {self.node_id}, {topic}, {sensor_id}')
                 break
-        LOGGER.debug(f'NODID2: {self.node_id}')
+        LOGGER.debug(f'NODE_ID2: {self.node_id}')
         return self.node_id
 
 
@@ -695,11 +703,9 @@ class MQFlag(udi_interface.Node):
     commands = {"QUERY": query, "RESET": reset_send}
 
 
-# This class is an attempt to add support for temperature/humidity sensors.
-# It was originally developed with a DHT22, but should work with
-# any of the following, since they I believe they get identified by tomaso the same:
-# DHT21, AM2301, AM2302, AM2321
-# Should be easy to add other temp/humdity sensors.
+# This class adds support for temperature/humidity/Dewpoint sensors.
+# It was originally developed with an AM2301
+
 class MQdht(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
@@ -725,13 +731,14 @@ class MQdht(udi_interface.Node):
             data = data['StatusSNS']
         if self.sensor_id in data:
             self.setDriver("ST", 1)
-            self.setDriver("ERR", 0)
+            # self.setDriver("ERR", 0)
             self.setDriver("CLITEMP", data[self.sensor_id]["Temperature"])
             self.setDriver("CLIHUM", data[self.sensor_id]["Humidity"])
             self.setDriver("DEWPT", data[self.sensor_id]["DewPoint"])
         else:
             self.setDriver("ST", 0)
-            self.setDriver("ERR", 1)
+            # self.setDriver("ERR", 1)
+
     def query(self, command=None):
         LOGGER.debug(f'QUERY: {self.sensor_id}')
         query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
@@ -740,11 +747,11 @@ class MQdht(udi_interface.Node):
         self.reportDrivers()
 
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "CLITEMP", "value": 0, "uom": 17},
-        {"driver": "CLIHUM", "value": 0, "uom": 22},
-        {"driver": "DEWPT", "value": 0, "uom": 17},
-        {"driver": "ERR", "value": 0, "uom": 2}
+        {"driver": "ST", "value": 0, "uom": 2, "name": "AM2301 ST"},
+        {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},
+        {"driver": "CLIHUM", "value": 0, "uom": 22, "name": "Humidity"},
+        {"driver": "DEWPT", "value": 0, "uom": 17, "name": "Dew Point"},
+        # {"driver": "ERR", "value": 0, "uom": 2}
     ]
 
     id = "MQDHT"
@@ -795,8 +802,8 @@ class MQds(udi_interface.Node):
         self.reportDrivers()
 
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "CLITEMP", "value": 0, "uom": 17},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "DS18B20 ST"},
+        {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},
     ]
 
     id = "MQDS"
@@ -961,7 +968,6 @@ class MQAnalog(udi_interface.Node):
         LOGGER.debug(f'XXX {self.sensor_id}, {data} ')
         if 'StatusSNS' in data:
             data = data['StatusSNS']
-            #
         if "ANALOG" in data:
             self.setDriver("ST", 1)
             LOGGER.debug(f'sensor_id UpdateInfo: {self.sensor_id}')

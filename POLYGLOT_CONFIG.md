@@ -23,9 +23,9 @@ Note - your Sonoff MUST run the [Sonoff-Tasmota](https://github.com/arendst/Sono
 			- `"id":` ISY node ID - Can be anything you like, but ISY restricts to alphanumeric characters only and underline, no special characters, maximum 14 symbols.
 			- `"type":` One of the following:
 				- *switch* - For basic sonoff power switch.
-				- *sensor* - For nodemcu multisensor (see link in thread).
+				- *sensor* - For nodemcu multi-sensor (see link in thread).
                 - *flag* - For your device to send a condition to ISY {OK,NOK,LO,HI,ERR,IN,OUT,UP,DOWN,TRIGGER,ON,OFF,---}
-				- *TempHumid* - For DHT21, DHT22, AM2301, AM2302, AM2321 sensors. * see details below
+				- *TempHumid* - For AM2301, AM2302, AM2321, DHT21, DHT22,  sensors. * see details below
 				- *Temp* - For DS18B20 sensors. * see details below
 				- *TempHumidPress* - Supports the BME280 sensors.
 				- *distance* - Supports HC-SR04 Ultrasonic Sensor.
@@ -38,10 +38,10 @@ Note - your Sonoff MUST run the [Sonoff-Tasmota](https://github.com/arendst/Sono
 							Important, use cmd_topic: cmnd/topic/dimmer and status_topic: stat/topic/DIMMER (not .../power and ../POWER) 
 			- `"status_topic":` - For switch this will be the cmnd topic (like `cmnd/sonoff1/power`), but on sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`). For Shelly Floods, this will be an array, like `[ "shellies/shellyflood-<unique-id>/sensor/temperature", "shellies/shellyflood-<unique-id>/sensor/flood" ]` (they usually also have a `battery` and `error` topic that follow the same pattern).
 			- `"cmd_topic":` - Is always required, even if the type doesn't support it (like a sensor).  Just enter a generic topic (`cmnd/sensor/POWER`).
-    * if you are using ANALOG, TEMP or TEMPHUMID 'types', you need to add a <'sensor_id': 'sensor name'> object to the configuration of the device
-     * the 'sensor name' can be found by examining an mqtt message in the Web console of the Tasmota device
-     * a devfile for those sensors would look like this:
-     * Note that the topic (Wemos32) is the same for all sensors on the same device. The 'id' and 'name' can be different
+    ** if you are using ANALOG, TEMP or TEMPHUMID 'types', you need to add a <'sensor_id': 'sensor name'> object to the configuration of the device
+     ** the 'sensor name' can be found by examining an mqtt message in the Web console of the Tasmota device
+     ** a devfile for those sensors would look like this:
+
 devices:
 - id: "WemosA1"
   name: "Wemos A1"
@@ -73,3 +73,5 @@ devices:
   sensor_id: "AM2301-32"
   status_topic: "tele/Wemos32/SENSOR"
   cmd_topic: "cmnd/Wemos32/POWER"
+
+- ** Note that the topic (Wemos32) is the same for all sensors on the same device. The 'id' and 'name' can be different
