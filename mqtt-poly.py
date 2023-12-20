@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.30'
+VERSION = '0.0.31'
 
 
 class Controller(udi_interface.Node):
@@ -275,21 +275,20 @@ class Controller(udi_interface.Node):
         try:
             try:
                 data = json.loads(payload)
-                if 'StatusSNS' in data:     # remove the StatusSNS wrapper, if present (from query)
+                if 'StatusSNS' in data:
                     data = data['StatusSNS']
                 if 'ANALOG' in data.keys():
                     LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
                     for sensor in data['ANALOG']:
                         LOGGER.info(f'_OA: {sensor}')
-                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-                elif 'DS18B20' in data.keys():
-                    for sensor in data.keys():
-                        LOGGER.info(f'_ODS: {sensor}')
-                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-                elif 'AM2301' in data.keys():
-                    for sensor in data.keys():
-                        LOGGER.info(f'_OAM: {sensor}')
-                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(
+                            payload, topic)
+                for sensor in [sensor for sensor in data.keys() if 'DS18B20' in sensor]:
+                    LOGGER.info(f'_ODS: {sensor}')
+                    self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+                for sensor in [sensor for sensor in data.keys() if 'AM2301' in sensor]:
+                    LOGGER.info(f'_OAM: {sensor}')
+                    self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
                 else:   # if it's anything else, process as usual
                     LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
                     self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
@@ -298,6 +297,37 @@ class Controller(udi_interface.Node):
                 self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
+
+            '''
+            def _on_message(self, mqttc, userdata, message):
+                topic = message.topic
+                payload = message.payload.decode("utf-8")
+                data = json.loads(payload)
+                LOGGER.debug("Received _on_message {} from {}".format(payload, topic))
+                try:
+                    if 'StatusSNS' in data:
+                        data = data['StatusSNS']
+                    if 'ANALOG' in data.keys():
+                        LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
+                        for sensor in data['ANALOG']:
+                            LOGGER.info(f'_OA: {sensor}')
+                            self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(
+                                payload, topic)
+                    for sensor in [sensor for sensor in data.keys() if 'DS18B20' in sensor]:
+                        LOGGER.info(f'_ODS: {sensor}')
+                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload,
+                                                                                                             topic)
+                    for sensor in [sensor for sensor in data.keys() if 'AM2301' in sensor]:
+                        LOGGER.info(f'_OAM: {sensor}')
+                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload,
+                                                                                                             topic)
+                except Exception as ex:
+                    LOGGER.error("Failed to process message {}".format(ex))
+            
+            def _dev_by_topic(self, topic):
+                LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
+                return self.status_topics_to_devices.get(topic, None)
+            '''
 
     def _dev_by_topic(self, topic):
         LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')

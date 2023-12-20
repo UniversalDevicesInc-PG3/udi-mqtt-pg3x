@@ -40,6 +40,7 @@ Note - your Sonoff MUST run the [Sonoff-Tasmota](https://github.com/arendst/Sono
 			- `"cmd_topic":` - Is always required, even if the type doesn't support it (like a sensor).  Just enter a generic topic (`cmnd/sensor/POWER`).
     ** if you are using ANALOG, TEMP or TEMPHUMID 'types', you need to add a <'sensor_id': 'sensor name'> object to the configuration of the device
      ** the 'sensor name' can be found by examining an mqtt message in the Web console of the Tasmota device
+     ** IMPORTANT: If you also have a "switch" type on the same topic, please add this one AFTER the definitions of "ANALOG", "Temp" etc.
      ** a devfile for those sensors would look like this:
 
 devices:
@@ -73,5 +74,10 @@ devices:
   sensor_id: "AM2301-32"
   status_topic: "tele/Wemos32/SENSOR"
   cmd_topic: "cmnd/Wemos32/POWER"
+- id: "Wemos32SW"
+  name: "Wemos 32 TH32"
+  type: "switch"
+  status_topic: "stat/Wemos32/POWER"
+  cmd_topic: "cmnd/Wemos32/power"
 
 - ** Note that the topic (Wemos32) is the same for all sensors on the same device. The 'id' and 'name' can be different
