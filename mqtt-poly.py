@@ -333,16 +333,17 @@ class Controller(udi_interface.Node):
         LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
         return self.status_topics_to_devices.get(topic, None)
 
-    def _get_device_address_from_sensor_id(self, topic, sensor_id):
-        LOGGER.debug(f'GDA1: {topic}  {sensor_id}')
+    def _get_device_address_from_sensor_id(self, topic, sensor_type):
+        LOGGER.debug(f'GDA1: {topic}  {sensor_type}')
         LOGGER.debug(f'DLT: {self.devlist}')
         self.node_id = None
         for device in self.devlist:
             LOGGER.debug(f'GDA2: {device}')
-            if topic.rsplit('/')[1] in device['status_topic'] and sensor_id in device['sensor_id']:
-                self.node_id = device['id'].lower().replace("_", "").replace("-", "_")[:14]
-                LOGGER.debug(f'NODE_ID: {self.node_id}, {topic}, {sensor_id}')
-                break
+            if 'sensor_id' in device:
+                if topic.rsplit('/')[1] in device['status_topic'] and sensor_type in device['sensor_id']:
+                    self.node_id = device['id'].lower().replace("_", "").replace("-", "_")[:14]
+                    LOGGER.debug(f'NODE_ID: {self.node_id}, {topic}, {sensor_type}')
+                    break
         LOGGER.debug(f'NODE_ID2: {self.node_id}')
         return self.node_id
 
