@@ -36,6 +36,8 @@ Note - your Sonoff MUST run the [Sonoff-Tasmota](https://github.com/arendst/Sono
                 - *shellyflood* - Shelly [Flood](https://shelly-api-docs.shelly.cloud/gen1/#shelly-flood-overview) sensor; supports monitoring of temperature, water leak detection (`flood`), battery level, and errors.
                 - *dimmer* - Smart Wi-Fi Light Dimmer Switch (https://www.amazon.com/Dimmer-Switch-Bresuve-Wireless-Compatible/dp/B07WRJWD28?th=1)
 							Important, use cmd_topic: cmnd/topic/dimmer and status_topic: stat/topic/DIMMER (not .../power and ../POWER) 
+                - ratgdo - adds garage device based on the ratgdo board. use topic_prefix/device name for both status & command topics. see ratgdo site for more
+                  https://paulwieland.github.io/ratgdo/
 			- `"status_topic":` - For switch this will be the cmnd topic (like `cmnd/sonoff1/power`), but on sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`). For Shelly Floods, this will be an array, like `[ "shellies/shellyflood-<unique-id>/sensor/temperature", "shellies/shellyflood-<unique-id>/sensor/flood" ]` (they usually also have a `battery` and `error` topic that follow the same pattern).
 			- `"cmd_topic":` - Is always required, even if the type doesn't support it (like a sensor).  Just enter a generic topic (`cmnd/sensor/POWER`).
 
