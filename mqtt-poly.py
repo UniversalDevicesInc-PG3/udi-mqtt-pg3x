@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.31'
+VERSION = '0.0.32'
 
 
 class Controller(udi_interface.Node):
@@ -26,7 +26,8 @@ class Controller(udi_interface.Node):
         self.mqtt_user = None
         self.mqtt_password = None
         self.devlist = None
-        # example: [ {'id': 'sonoff1', 'type': 'switch', 'status_topic': 'stat/sonoff1/power', 'cmd_topic': 'cmnd/sonoff1/power'} ]
+        # e.g. [{'id': 'topic1', 'type': 'switch', 'status_topic': 'stat/topic1/power',
+        # 'cmd_topic': 'cmnd/topic1/power'}]
         self.status_topics = []
         # Maps to device IDs
         self.status_topics_to_devices: Dict[str, str] = {}
@@ -199,7 +200,7 @@ class Controller(udi_interface.Node):
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
-        LOGGER.debug(f'DEVYLIST: {self.devlist}')
+        LOGGER.debug(f'DEVLIST: {self.devlist}')
 
         return True
 
@@ -298,37 +299,6 @@ class Controller(udi_interface.Node):
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
-            '''
-            def _on_message(self, mqttc, userdata, message):
-                topic = message.topic
-                payload = message.payload.decode("utf-8")
-                data = json.loads(payload)
-                LOGGER.debug("Received _on_message {} from {}".format(payload, topic))
-                try:
-                    if 'StatusSNS' in data:
-                        data = data['StatusSNS']
-                    if 'ANALOG' in data.keys():
-                        LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
-                        for sensor in data['ANALOG']:
-                            LOGGER.info(f'_OA: {sensor}')
-                            self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(
-                                payload, topic)
-                    for sensor in [sensor for sensor in data.keys() if 'DS18B20' in sensor]:
-                        LOGGER.info(f'_ODS: {sensor}')
-                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload,
-                                                                                                             topic)
-                    for sensor in [sensor for sensor in data.keys() if 'AM2301' in sensor]:
-                        LOGGER.info(f'_OAM: {sensor}')
-                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload,
-                                                                                                             topic)
-                except Exception as ex:
-                    LOGGER.error("Failed to process message {}".format(ex))
-            
-            def _dev_by_topic(self, topic):
-                LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
-                return self.status_topics_to_devices.get(topic, None)
-            '''
-
     def _dev_by_topic(self, topic):
         LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
         return self.status_topics_to_devices.get(topic, None)
@@ -346,8 +316,6 @@ class Controller(udi_interface.Node):
                     break
         LOGGER.debug(f'NODE_ID2: {self.node_id}')
         return self.node_id
-
-
 
     @staticmethod
     def _format_device_address(dev) -> str:
@@ -416,7 +384,7 @@ class MQSwitch(udi_interface.Node):
 
 
 # Class for a single channel Dimmer. 
-# Currently supports RJWF-02A
+# Currently, supports RJWF-02A
 class MQDimmer(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
@@ -590,7 +558,7 @@ class MQSensor(udi_interface.Node):
         # humidity
         if "humidity" in data:
             self.setDriver("CLIHUM", data["humidity"])
-        # light detecor reading
+        # light detector reading
         if "ldr" in data:
             self.setDriver("LUMIN", data["ldr"])
         # LED
@@ -843,7 +811,7 @@ class MQds(udi_interface.Node):
 
 
 # This class is an attempt to add support for temperature/humidity/pressure sensors.
-# Currently supports the BME280.  Could be extended to accept others.
+# Currently, supports the BME280.  Could be extended to accept others.
 class MQbme(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
@@ -861,7 +829,7 @@ class MQbme(udi_interface.Node):
             self.setDriver("ST", 1)
             self.setDriver("CLITEMP", data["BME280"]["Temperature"])
             self.setDriver("CLIHUM", data["BME280"]["Humidity"])
-            # Converting to "Hg, could do this in sonoff-tomasto
+            # Converting to Hg, could do this in sonoff-Tasmota
             # or just report the raw hPA (or convert to kPA).
             press = format(
                 round(float(".02952998751") * float(data["BME280"]["Pressure"]), 2)
