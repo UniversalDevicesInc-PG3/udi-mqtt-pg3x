@@ -11,7 +11,7 @@ import time
 
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
-VERSION = '0.0.32'
+VERSION = '0.0.33'
 
 
 class Controller(udi_interface.Node):
@@ -66,13 +66,12 @@ class Controller(udi_interface.Node):
                 LOGGER.error("Failed to open {}: {}".format(self.Parameters["devfile"], ex))
                 return False
             try:
-                dev_yaml = yaml.safe_load(f.read())     # upload devfile into data
+                dev_yaml = yaml.safe_load(f.read())  # upload devfile into data
                 f.close()
             except Exception as ex:
                 LOGGER.error(
                     "Failed to parse {} content: {}".format(self.Parameters["devfile"], ex))
                 return False
-
             if "devices" not in dev_yaml:
                 LOGGER.error(
                     "Manual discovery file {} is missing bulbs section".format(self.Parameters["devfile"]))
@@ -105,7 +104,7 @@ class Controller(udi_interface.Node):
             if "name" in dev:
                 name = dev["name"]
             else:
-                name = dev["id"]        # if there is no 'friendly name' use the ID instead
+                name = dev["id"]  # if there is no 'friendly name' use the ID instead
             address = Controller._format_device_address(dev)
             if dev["type"] == "shellyflood":
                 if not self.poly.getNode(address):
@@ -153,6 +152,11 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQbme(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
+                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
+                    dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
+                    LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
+                    self._add_status_topics(dev, [dev['extra_status_topic']])
             elif dev["type"] == "distance":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -201,7 +205,6 @@ class Controller(udi_interface.Node):
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
         LOGGER.debug(f'DEVLIST: {self.devlist}')
-
         return True
 
     def start(self):
@@ -210,13 +213,11 @@ class Controller(udi_interface.Node):
             time.sleep(5)
         polyglot.updateProfile()
         self.poly.setCustomParamsDoc()
-
         self.mqttc = mqtt.Client()
         self.mqttc.on_connect = self._on_connect
         self.mqttc.on_disconnect = self._on_disconnect
         self.mqttc.on_message = self._on_message
         self.mqttc.is_connected = False
-
         self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
         try:
             self.mqttc.connect(self.mqtt_server, self.mqtt_port, 10)
@@ -290,10 +291,13 @@ class Controller(udi_interface.Node):
                 for sensor in [sensor for sensor in data.keys() if 'AM2301' in sensor]:
                     LOGGER.info(f'_OAM: {sensor}')
                     self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-                else:   # if it's anything else, process as usual
+                for sensor in [sensor for sensor in data.keys() if 'BME280' in sensor]:
+                    LOGGER.info(f'_OBM: {sensor}')
+                    self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
+                else:  # if it's anything else, process as usual
                     LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
                     self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
-            except json.decoder.JSONDecodeError:    # if it's not a JSON, process as usual
+            except json.decoder.JSONDecodeError:  # if it's not a JSON, process as usual
                 LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
                 self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
@@ -530,9 +534,7 @@ class MQSensor(udi_interface.Node):
         try:
             data = json.loads(payload)
         except Exception as ex:
-            LOGGER.error(
-                "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
-            )
+            LOGGER.error("Failed to parse MQTT Payload as Json: {} {}".format(ex, payload))
             return False
 
         # motion detector
@@ -601,7 +603,6 @@ class MQSensor(udi_interface.Node):
             cmd["transition"] = transition
         if flash > 0:
             cmd["flash"] = flash
-
         self.controller.mqtt_pub(self.cmd_topic, json.dumps(cmd))
 
     def _check_limit(self, value):
@@ -698,13 +699,11 @@ class MQFlag(udi_interface.Node):
     drivers = [{"driver": "ST", "value": 0, "uom": 25}]
 
     id = "MQFLAG"
-
     commands = {"QUERY": query, "RESET": reset_send}
 
 
 # This class adds support for temperature/humidity/Dewpoint sensors.
 # It was originally developed with an AM2301
-
 class MQdht(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
@@ -815,36 +814,52 @@ class MQds(udi_interface.Node):
 class MQbme(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
+        LOGGER.debug(f'DEVCLASS: {device} ')
+        self.cmd_topic = device["cmd_topic"]
+        if 'sensor_id' in device:
+            self.sensor_id = device['sensor_id']
+        else:
+            self.sensor_id = 'SINGLE_SENSOR'
+            device['sensor_id'] = self.sensor_id
+        LOGGER.debug(f'CMD_ID {self.sensor_id}, {self.cmd_topic}')
         self.on = False
 
     def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
-            LOGGER.error(
-                "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
-            )
+            LOGGER.error("Failed to parse MQTT Payload as Json: {} {}".format(ex, payload))
             return False
-        if "BME280" in data:
+        LOGGER.debug(f'BBB {self.sensor_id}, {data} ')
+        if 'StatusSNS' in data:
+            data = data['StatusSNS']
+        if self.sensor_id in data:
             self.setDriver("ST", 1)
-            self.setDriver("CLITEMP", data["BME280"]["Temperature"])
-            self.setDriver("CLIHUM", data["BME280"]["Humidity"])
+            self.setDriver("CLITEMP", data[self.sensor_id]["Temperature"])
+            self.setDriver("CLIHUM", data[self.sensor_id]["Humidity"])
+            self.setDriver("DEWPT", data[self.sensor_id]["DewPoint"])
             # Converting to Hg, could do this in sonoff-Tasmota
             # or just report the raw hPA (or convert to kPA).
             press = format(
-                round(float(".02952998751") * float(data["BME280"]["Pressure"]), 2)
+                round(float(".02952998751") * float(data[self.sensor_id]["Pressure"]), 2)
             )
             self.setDriver("BARPRES", press)
         else:
             self.setDriver("ST", 0)
 
     def query(self, command=None):
+        LOGGER.debug(f'QUERY: {self.sensor_id}')
+        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        LOGGER.debug(f'QT: {query_topic}')
+        self.controller.mqtt_pub(query_topic, " 10")
         self.reportDrivers()
 
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "CLITEMP", "value": 0, "uom": 17},
-        {"driver": "CLIHUM", "value": 0, "uom": 22},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
+        {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},
+        {"driver": "CLIHUM", "value": 0, "uom": 22, "name": "Humidity"},
+        {"driver": "DEWPT", "value": 0, "uom": 17, "name": "Dew Point"},
         {"driver": "BARPRES", "value": 0, "uom": 23},
     ]
 
@@ -974,7 +989,7 @@ class MQAnalog(udi_interface.Node):
                 self.setDriver("GPV", data["ANALOG"][self.sensor_id])
                 LOGGER.info(f'M-analog {self.sensor_id}:  {data["ANALOG"][self.sensor_id]}')
             else:
-                for key, value in data['ANALOG'].items():   # look for the ONLY reading inside 'ANALOG'
+                for key, value in data['ANALOG'].items():  # look for the ONLY reading inside 'ANALOG'
                     LOGGER.info(f'single analog {key}: {value}')
                     self.setDriver("GPV", value)
         else:
