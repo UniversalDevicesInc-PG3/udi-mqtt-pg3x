@@ -89,6 +89,7 @@
             <st id="ST" editor="BOOL" />
             <st id="CLITEMP" editor="TEMPF" />
             <st id="CLIHUM" editor="HUM" />
+            <st id="DEWPT" editor="DEWF" />
         </sts>
 	<cmds>
 	    <sends />
