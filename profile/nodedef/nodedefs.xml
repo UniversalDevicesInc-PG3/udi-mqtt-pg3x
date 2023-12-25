@@ -117,6 +117,7 @@
             <st id="ST" editor="BOOL" />
             <st id="CLITEMP" editor="TEMPF" />
             <st id="CLIHUM" editor="HUM" />
+            <st id="DEWPT" editor="DEWF" />
             <st id="BARPRES" editor="PRESS" />
         </sts>
         <cmds>
@@ -143,7 +144,10 @@
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
-            <st id="GPV" editor="ANALOG" />
+            <st id="GV0" editor="ANALOG" />
+            <st id="GV1" editor="ANALOG" />
+            <st id="GV2" editor="ANALOG" />
+            <st id="GV3" editor="ANALOG" />
         </sts>
         <cmds>
             <sends />
