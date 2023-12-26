@@ -5,17 +5,12 @@
 This Poly provides an interface between MQTT broker and Polyglot v3 server.
 
 ### Installation instructions
-You can install the Node Server from the Polyglot store or manually running
-```
-cd ~/.polyglot/nodeservers
-git clone https://github.com/Trilife/udi-mqtt-pg3x.git MQTT
-cd MQTT
-./install.sh
-```
+You can install the Node Server from the Polyglot store 
 
 ### Notes
 
 This BETA version has added a DIMMER module and expanded ANALOG to include A0, Temperature, Illuminance, Range, pH and MQX. "Query" may not work!
+It now also allows for multiple sensors on the same device. Each device gets its own node.
 
 Please report any problems on the UDI user forum.
 
