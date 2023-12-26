@@ -9,7 +9,7 @@ You can install the Node Server from the Polyglot store
 
 ### Notes
 
-This BETA version has added a DIMMER module and expanded ANALOG to include A0, Temperature, Illuminance, Range, pH and MQX. "Query" may not work!
+Thisversion has added a DIMMER module and expanded ANALOG to include A0, Temperature, Illuminance, Range, pH and MQX.
 It now also allows for multiple sensors on the same device. Each device gets its own node.
 
 Please report any problems on the UDI user forum.
