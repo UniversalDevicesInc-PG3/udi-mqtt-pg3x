@@ -14,6 +14,7 @@ Custom = udi_interface.Custom
 
 VERSION = '0.0.33'
 
+
 class Controller(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name):
         super().__init__(polyglot, primary, address, name)
@@ -1189,6 +1190,7 @@ class MQRGBWstrip(udi_interface.Node):
 
     commands = {"QUERY": query, "DON": led_on, "DOF": led_off, "SETRGBW": rgbw_set}
 
+
 # Class for Ratgdo Garage door opener for MYQ replacement
 # Able to control door, light, lock and get status of same as well as motion, obstruction
 class MQratgdo(udi_interface.Node):
@@ -1200,10 +1202,10 @@ class MQratgdo(udi_interface.Node):
     def updateInfo(self, payload, topic: str):
         topic_suffix = topic.split('/')[-1]
         if topic_suffix == "availability":
-            value = int( payload == "online" )
+            value = int(payload == "online")
             self.setDriver("ST", value)
         elif topic_suffix == "light":
-            value = int( payload == "on" )
+            value = int(payload == "on")
             self.setDriver("GV0", value)
         elif topic_suffix == "door":
             if payload == "open":
@@ -1218,22 +1220,22 @@ class MQratgdo(udi_interface.Node):
                 value = 0
             self.setDriver("GV1", value)
         elif topic_suffix == "motion":
-            value = int( payload == "detected" )
+            value = int(payload == "detected")
             self.setDriver("GV2", value)
         elif topic_suffix == "lock":
-            value = int( payload == "locked" )
+            value = int(payload == "locked")
             self.setDriver("GV3", value)
         elif topic_suffix == "obstruction":
-            value = int( payload == "obstructed" )
+            value = int(payload == "obstructed")
             self.setDriver("GV4", value)
         else:
             LOGGER.warn(f"Unable to handle data for topic {topic}")
 
     def lt_on(self, command):
-        self.controller.mqtt_pub(self.cmd_topic + "light", "on" )
+        self.controller.mqtt_pub(self.cmd_topic + "light", "on")
 
     def lt_off(self, command):
-        self.controller.mqtt_pub(self.cmd_topic + "light", "off" )
+        self.controller.mqtt_pub(self.cmd_topic + "light", "off")
 
     def dr_open(self, command):
         self.controller.mqtt_pub(self.cmd_topic + "door", "open")
@@ -1242,13 +1244,13 @@ class MQratgdo(udi_interface.Node):
         self.controller.mqtt_pub(self.cmd_topic + "door", "close")
 
     def dr_stop(self, command):
-        self.controller.mqtt_pub(self.cmd_topic + "door" , "stop")
+        self.controller.mqtt_pub(self.cmd_topic + "door", "stop")
 
     def lk_lock(self, command):
-        self.controller.mqtt_pub(self.cmd_topic + "lock" , "lock")
+        self.controller.mqtt_pub(self.cmd_topic + "lock", "lock")
 
     def lk_unlock(self, command):
-        self.controller.mqtt_pub(self.cmd_topic + "lock" , "unlock")
+        self.controller.mqtt_pub(self.cmd_topic + "lock", "unlock")
 
     def query(self, command=None):
         self.reportDrivers()
@@ -1264,7 +1266,9 @@ class MQratgdo(udi_interface.Node):
 
     id = "MQRATGDO"
 
-    commands = {"QUERY": query, "DON": lt_on, "DOF": lt_off, "OPEN" : dr_open, "CLOSE" : dr_close, "STOP" : dr_stop, "LOCK" : lk_lock, "UNLOCK" : lk_unlock}
+    commands = {"QUERY": query, "DON": lt_on, "DOF": lt_off, "OPEN": dr_open, "CLOSE": dr_close, "STOP": dr_stop,
+                "LOCK": lk_lock, "UNLOCK": lk_unlock}
+
 
 if __name__ == "__main__":
     try:
