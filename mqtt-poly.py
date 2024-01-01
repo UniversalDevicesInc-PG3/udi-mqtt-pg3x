@@ -12,7 +12,7 @@ import time
 LOGGER = udi_interface.LOGGER
 Custom = udi_interface.Custom
 
-VERSION = '0.0.33'
+VERSION = '0.0.34'
 
 
 class Controller(udi_interface.Node):
@@ -1008,10 +1008,8 @@ class MQAnalog(udi_interface.Node):
         else:
             LOGGER.debug(f'NOANALOG: {self.sensor_id}')
             self.setDriver("ST", 0)
-            self.setDriver("GV0", 0)
-            self.setDriver("GV1", 0)
-            self.setDriver("GV2", 0)
-            self.setDriver("GV3", 0)
+            self.setDriver("GPV", 0)
+
 
     def query(self, command=None):
         LOGGER.debug(f'QUERY: {self.sensor_id}')
@@ -1024,10 +1022,7 @@ class MQAnalog(udi_interface.Node):
     # UOM:56 = "The raw value reported by device"
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "Analog ST"},
-        {"driver": "GV0", "value": 0, "uom": 56, "name": "Analog1"},
-        {"driver": "GV1", "value": 0, "uom": 56, "name": "Analog2"},
-        {"driver": "GV2", "value": 0, "uom": 56, "name": "Analog3"},
-        {"driver": "GV3", "value": 0, "uom": 56, "name": "Analog4"},
+        {"driver": "GPV", "value": 0, "uom": 56, "name": "Analog"}
     ]
 
     id = "MQANAL"
