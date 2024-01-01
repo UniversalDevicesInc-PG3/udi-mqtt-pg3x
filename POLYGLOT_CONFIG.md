@@ -9,6 +9,7 @@ This Poly provides an interface between MQTT broker and [Polyglot PG3](https://g
 
 Note - your Sonoff MUST run the [Sonoff-Tasmota](https://github.com/arendst/Sonoff-Tasmota) firmware in order to work with MQTT!
 
+
  1. You will need a MQTT broker running (can be on RPi running Polyglot). (Likely already running, if you are on PG3 or PG3x on eISY)
 	 -  See post #1 in [this thread](https://forum.universal-devices.com/topic/24538-sonoff) on how to setup.
 
