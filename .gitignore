@@ -74,3 +74,6 @@ target/
 
 #Project specific
 polyinterface
+/*.cert
+*.key
+*.pid
