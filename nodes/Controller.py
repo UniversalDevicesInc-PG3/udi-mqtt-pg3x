@@ -1,5 +1,5 @@
 """
-udi-framework-pg3 NodeServer/Plugin for EISY/PolISY
+udi-framework-pg3 NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -9,8 +9,6 @@ controller mqctrl
 import udi_interface
 
 from typing import Dict, List
-import sys
-# import logging
 import paho.mqtt.client as mqtt
 import json
 import yaml
@@ -18,6 +16,20 @@ import time
 
 # Nodes
 from nodes import MQSwitch
+from nodes import MQDimmer
+from nodes import MQFan
+from nodes import MQSensor
+from nodes import MQFlag
+from nodes import MQdht
+from nodes import MQds
+from nodes import MQbme
+from nodes import MQhcsr
+from nodes import MQShellyFlood
+from nodes import MQAnalog
+from nodes import MQs31
+from nodes import MQraw
+from nodes import MQRGBWstrip
+from nodes import MQratgdo
 
 """
 Some shortcuts for udi interface components
@@ -302,22 +314,35 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQSwitch(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
-            elif dev["type"] == "shellyflood":
+
+            elif dev["type"] == "dimmer":
                 if not self.poly.getNode(address):
-                    LOGGER.info(f"Adding {dev['type']} {name}")
-                    self.poly.addNode(ShellyFlood(self.poly, self.address, address, name, dev))
-                    status_topics = dev["status_topic"]
-                    self._add_status_topics(dev, status_topics)
+                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                    self.poly.addNode(MQDimmer(self.poly, self.address, address, name, dev))
+                    self._add_status_topics(dev, [dev["status_topic"]])
+                    dev['extra_status_topic'] = dev['status_topic'].rsplit('/', 1)[0] + '/RESULT'
+                    LOGGER.info(f'Adding {dev["extra_status_topic"]}')
+                    self._add_status_topics(dev, [dev['extra_status_topic']])
+                    LOGGER.info("ADDED {} {} /RESULT".format(dev["type"], name))
+                    
+            elif dev["type"] == "ifan":
+                if not self.poly.getNode(address):
+                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                    self.poly.addNode(MQFan(self.poly, self.address, address, name, dev))
+                    self._add_status_topics(dev, [dev["status_topic"]])
+                    
             elif dev["type"] == "sensor":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQSensor(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    
             elif dev["type"] == "flag":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQFlag(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    
             elif dev["type"] == "TempHumid":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -328,6 +353,7 @@ class Controller(udi_interface.Node):
                     dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
                     LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
+                    
             elif dev["type"] == "Temp":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -338,6 +364,7 @@ class Controller(udi_interface.Node):
                     dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
                     LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
+                    
             elif dev["type"] == "TempHumidPress":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -348,11 +375,20 @@ class Controller(udi_interface.Node):
                     dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
                     LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
+                    
             elif dev["type"] == "distance":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQhcsr(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    
+            elif dev["type"] == "shellyflood":
+                if not self.poly.getNode(address):
+                    LOGGER.info(f"Adding {dev['type']} {name}")
+                    self.poly.addNode(MQShellyFlood(self.poly, self.address, address, name, dev))
+                    status_topics = dev["status_topic"]
+                    self._add_status_topics(dev, status_topics)
+                    
             elif dev["type"] == "analog":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -363,35 +399,25 @@ class Controller(udi_interface.Node):
                     dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
                     LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
+                    
             elif dev["type"] == "s31":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQs31(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    
             elif dev["type"] == "raw":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQraw(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+                    
             elif dev["type"] == "RGBW":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQRGBWstrip(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
-            elif dev["type"] == "ifan":
-                if not self.poly.getNode(address):
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.poly.addNode(MQFan(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-            elif dev["type"] == "dimmer":
-                if not self.poly.getNode(address):
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.poly.addNode(MQDimmer(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-                    dev['extra_status_topic'] = dev['status_topic'].rsplit('/', 1)[0] + '/RESULT'
-                    LOGGER.info(f'Adding {dev["extra_status_topic"]}')
-                    self._add_status_topics(dev, [dev['extra_status_topic']])
-                    LOGGER.info("ADDED {} {} /RESULT".format(dev["type"], name))
+                    
             elif dev["type"] == "ratgdo":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
@@ -404,6 +430,7 @@ class Controller(udi_interface.Node):
                                      status_topics_base + "lock",
                                      status_topics_base + "obstruction"]
                     self._add_status_topics(dev, status_topics)
+                    
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")

@@ -3,21 +3,23 @@ mqtt-poly NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
-node MQSwitch
+node MQhcsr
+
+# This class is an attempt to add support for HC-SR04 Ultrasonic Sensor.
+# Returns distance in centimeters.
 """
 
 import udi_interface
 
 LOGGER = udi_interface.LOGGER
 
-class MQSwitch(udi_interface.Node):
-    id = "mqsw"
+class MQhcsr(udi_interface.Node):
+    id = "mqhcsr"
     
     """
     This is the class that all the Nodes will be represented by. You will
     add this to Polyglot/ISY with the interface.addNode method.
     """
-
     def __init__(self, polyglot, primary, address, name, device):
         """
         Super runs all the parent class necessities.
@@ -27,32 +29,22 @@ class MQSwitch(udi_interface.Node):
         :param name: This nodes name
         """
         super().__init__(polyglot, primary, address, name)
-
-        self.controller = self.poly.getNode(self.primary)
-        self.cmd_topic = device["cmd_topic"]
         self.on = False
 
     def updateInfo(self, payload, topic: str):
-        if payload == "ON":
-            if not self.on:
-                self.reportCmd("DON")
-                self.on = True
-            self.setDriver("ST", 100)
-        elif payload == "OFF":
-            if self.on:
-                self.reportCmd("DOF")
-                self.on = False
-            self.setDriver("ST", 0)
+        try:
+            data = json.loads(payload)
+        except Exception as ex:
+            LOGGER.error(
+                "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
+            )
+            return False
+        if "SR04" in data:
+            self.setDriver("ST", 1)
+            self.setDriver("DISTANC", data["SR04"]["Distance"])
         else:
-            LOGGER.error("Invalid payload {}".format(payload))
-
-    def set_on(self, command):
-        self.on = True
-        self.controller.mqtt_pub(self.cmd_topic, "ON")
-
-    def set_off(self, command):
-        self.on = False
-        self.controller.mqtt_pub(self.cmd_topic, "OFF")
+            self.setDriver("ST", 0)
+            self.setDriver("DISTANC", 0)
 
     def query(self, command=None):
         """
@@ -60,12 +52,12 @@ class MQSwitch(udi_interface.Node):
         the parent class, so you don't need to override this method unless
         there is a need.
         """
-        self.controller.mqtt_pub(self.cmd_topic, "")
         self.reportDrivers()
         
     # all the drivers - for reference
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 78, "name": "Power"}
+        {"driver": "ST", "value": 0, "uom": 2},
+        {"driver": "DISTANC", "value": 0, "uom": 5},
     ]
 
     """
@@ -74,8 +66,5 @@ class MQSwitch(udi_interface.Node):
     """
     commands = {
         "QUERY": query,
-        "DON": set_on,
-        "DOF": set_off
     }
 
-    hint = [4, 2, 0, 0]
