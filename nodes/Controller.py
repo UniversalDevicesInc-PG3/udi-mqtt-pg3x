@@ -1,5 +1,5 @@
 """
-udi-framework-pg3 NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -43,14 +43,8 @@ LOG_HANDLER = udi_interface.LOG_HANDLER
 Custom = udi_interface.Custom
 ISY = udi_interface.ISY
 
-
-"""
-framework url's
-"""
-URL_HOME = 'http://{g}/home'
-
 class Controller(udi_interface.Node):
-    id = "mqctrl"
+    id = 'mqctrl'
 
     def __init__(self, polyglot, primary, address, name):
         """
@@ -61,7 +55,7 @@ class Controller(udi_interface.Node):
         ready
         we exist!
         """
-        super(Controller, self).__init__(polyglot, primary, address, name)
+        super().__init__(polyglot, primary, address, name)
 
         # useful global variables
         self.poly = polyglot
@@ -72,15 +66,14 @@ class Controller(udi_interface.Node):
         # here are specific variables to this controller
         self.mqtt_server = "localhost"
         self.mqtt_port = 1884
-        self.mqtt_user = None
-        self.mqtt_password = None
-        self.devlist = None
+        self.mqtt_user = 'admin'
+        self.mqtt_password = 'admin'
+        self.devlist = {}
         # e.g. [{'id': 'topic1', 'type': 'switch', 'status_topic': 'stat/topic1/power',
         # 'cmd_topic': 'cmnd/topic1/power'}]
         self.status_topics = []
         # Maps to device IDs
         self.status_topics_to_devices: Dict[str, str] = {}
-        self.mqttc = None
         self.valid_configuration = False
 
         # Create data storage classes to hold specific data that we need
@@ -115,6 +108,7 @@ class Controller(udi_interface.Node):
 
         while self.valid_configuration is False:
             LOGGER.info('Waiting on valid configuration')
+            self.Notices['waiting'] = 'Waiting on valid configuration'
             time.sleep(5)
 
         # Send the profile files to the ISY if neccessary. The profile version
@@ -131,20 +125,27 @@ class Controller(udi_interface.Node):
         # heartbeat in your node server
         self.heartbeat(True)
 
+        # get user mqtt server connection going
         self.mqttc = mqtt.Client()
         self.mqttc.on_connect = self._on_connect
         self.mqttc.on_disconnect = self._on_disconnect
         self.mqttc.on_message = self._on_message
-        self.mqttc.is_connected = False
         self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
         try:
             self.mqttc.connect(self.mqtt_server, self.mqtt_port, 10)
             self.mqttc.loop_start()
         except Exception as ex:
             LOGGER.error("Error connecting to Poly MQTT broker {}".format(ex))
-            return False
-
-        LOGGER.info("Start")
+            self.Notices['mqtt'] = 'Error on user MQTT connection'
+            # return False ; not compatible with start
+        connected = self.mqttc.is_connected()
+        while connected != True:
+            LOGGER.error('Waiting on user MQTT connection')
+            self.Notices['mqtt'] = 'Waiting on user MQTT connection'
+            time.sleep(3)
+            connected = self.mqttc.is_connected()
+        self.removeNoticesAll()
+        LOGGER.info("Start Done...")
 
     """
     Called via the CUSTOMPARAMS event. When the user enters or
@@ -189,19 +190,16 @@ class Controller(udi_interface.Node):
         # pull in Parameters from Node Server Configuration page
         self.mqtt_server = self.Parameters["mqtt_server"] or 'localhost'
         self.mqtt_port = int(self.Parameters["mqtt_port"] or 1884)
-        if self.Parameters["mqtt_user"] is None:
-            LOGGER.error("mqtt_user must be configured")
-            return False
-        if self.Parameters["mqtt_password"] is None:
-            LOGGER.error("mqtt_password must be configured")
-            return False
-        self.mqtt_user = self.Parameters["mqtt_user"]
-        self.mqtt_password = self.Parameters["mqtt_password"]
+        self.mqtt_ = int(self.Parameters["mqtt_port"] or 1884)
+        self.mqtt_port = int(self.Parameters["mqtt_port"] or 1884)
+        self.mqtt_user = self.Parameters["mqtt_user"] or 'admin'
+        self.mqtt_password = self.Parameters["mqtt_password"] or 'admin'
 
         # upload the device topics yaml file (multiple devices)
         if self.Parameters["devfile"] is not None:
             try:
-                f = open(self.Parameters["devfile"])
+                x = self.Parameters["devfile"]
+                f = open(x)
             except Exception as ex:
                 LOGGER.error("Failed to open {}: {}".format(self.Parameters["devfile"], ex))
                 return False
@@ -221,7 +219,9 @@ class Controller(udi_interface.Node):
         # upload the device topic from the Node Server Configuration Page
         elif self.Parameters["devlist"] is not None:
             try:
-                self.devlist = json.loads(self.Parameters["devlist"])
+                x= self.Parameters['devlist']
+                if type(x) == str:
+                    self.devlist = json.loads(x)
             except Exception as ex:
                 LOGGER.error("Failed to parse the devlist: {}".format(ex))
                 return False
@@ -491,7 +491,6 @@ class Controller(udi_interface.Node):
     def _on_connect(self, mqttc, userdata, flags, rc):
         if rc == 0:
             LOGGER.info("Poly MQTT Connected, subscribing...")
-            self.mqttc.is_connected = True
             results = []
             for stopic in self.status_topics:
                 results.append((stopic, tuple(self.mqttc.subscribe(stopic))))
@@ -513,7 +512,6 @@ class Controller(udi_interface.Node):
             LOGGER.error("Poly MQTT Connect failed")
 
     def _on_disconnect(self, mqttc, userdata, rc):
-        self.mqttc.is_connected = False
         if rc != 0:
             LOGGER.warning("Poly MQTT disconnected, trying to re-connect")
             try:
@@ -583,16 +581,17 @@ class Controller(udi_interface.Node):
         self.mqttc.publish(topic, message, retain=False)
 
 
-    # Commands that this node can handle.  Should match the
-    # 'accepts' section of the nodedef file.
-    commands = {
-        'QUERY': query,
-     'DISCOVER': discover
-    }
-
     # Status that this node has. Should match the 'sts' section
     # of the nodedef file.
     drivers = [
         {"driver": "ST", "value": 1, "uom": 2, "name": "NS Online"},
     ]
+
+    # Commands that this node can handle.  Should match the
+    # 'accepts' section of the nodedef file.
+    commands = {
+        'QUERY': query,
+        'DISCOVER': discover,
+    }
+
 

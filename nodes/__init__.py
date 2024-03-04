@@ -1,7 +1,6 @@
 
 """ Node classes used by the Python template Node Server. """
 
-from .Controller      import Controller
 from .MQSwitch        import MQSwitch
 from .MQDimmer        import MQDimmer
 from .MQFan           import MQFan
@@ -17,4 +16,5 @@ from .MQs31           import MQs31
 from .MQraw           import MQraw
 from .MQRGBWstrip     import MQRGBWstrip
 from .MQratgdo        import MQratgdo
+from .Controller      import Controller
 

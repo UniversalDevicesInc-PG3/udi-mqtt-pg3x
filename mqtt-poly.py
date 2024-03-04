@@ -44,7 +44,7 @@ if __name__ == "__main__":
         * use 'controller' for both parent and address and PG3 will be able
           to automatically update node server status
         """
-        control = Controller(polyglot, 'mqctrl', 'mqctrl', 'MQTT Controller')
+        control = Controller(polyglot, 'mqctrl', 'mqctrl', 'MQTT')
 
         """
         Sits around and does nothing forever, keeping your program running.

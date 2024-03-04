@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -9,11 +9,12 @@ General purpose Analog input using ADC.
 """
 
 import udi_interface
+import json
 
 LOGGER = udi_interface.LOGGER
 
 class MQAnalog(udi_interface.Node):
-    id = "mqanal"
+    id = 'mqanal'
     
     """
     This is the class that all the Nodes will be represented by. You will
@@ -50,7 +51,7 @@ class MQAnalog(udi_interface.Node):
         if "ANALOG" in data:
             self.setDriver("ST", 1)
             LOGGER.debug(f'sensor_id UpdateInfo: {self.sensor_id}')
-            if self.sensor_id is not 'SINGLE_SENSOR':
+            if self.sensor_id != 'SINGLE_SENSOR':
                 self.setDriver("GPV", data["ANALOG"][self.sensor_id])
                 LOGGER.info(f'M-analog {self.sensor_id}:  {data["ANALOG"][self.sensor_id]}')
             else:

@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -15,7 +15,7 @@ import udi_interface
 LOGGER = udi_interface.LOGGER
 
 class MQShellyFlood(udi_interface.Node):
-    id = "mqshflood"
+    id = 'mqshflood'
     
     """
     This is the class that all the Nodes will be represented by. You will

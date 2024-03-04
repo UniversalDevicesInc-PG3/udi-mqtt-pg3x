@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -14,7 +14,7 @@ import udi_interface
 LOGGER = udi_interface.LOGGER
 
 class MQratgdo(udi_interface.Node):
-    id = "mqratgdo"
+    id = 'mqratgdo'
     
     """
     This is the class that all the Nodes will be represented by. You will
@@ -31,6 +31,27 @@ class MQratgdo(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"] + "/command/"
+        self.poly.subscribe(self.poly.POLL, self.poll)
+        self.device = device
+        self.motion = False
+
+    """
+    Called via the POLL event.  The POLL event is triggerd at
+    the intervals specified in the node server configuration. There
+    are two separate poll events, a long poll and a short poll. Which
+    one is indicated by the flag.  flag will hold the poll type either
+    'longPoll' or 'shortPoll'.
+
+    Use this if you want your node server to do something at fixed
+    intervals.
+    """
+    def poll(self, flag):
+        if 'longPoll' in flag:
+            LOGGER.debug('longPoll (controller)')
+        else:
+            LOGGER.debug('shortPoll (controller)')
+            if self.motion == True:
+                self.m_clear()
 
     def updateInfo(self, payload, topic: str):
         topic_suffix = topic.split('/')[-1]
@@ -54,6 +75,7 @@ class MQratgdo(udi_interface.Node):
             self.setDriver("GV1", value)
         elif topic_suffix == "motion":
             value = int(payload == "detected")
+            self.motion = (payload == 'detected')
             self.setDriver("GV2", value)
         elif topic_suffix == "lock":
             value = int(payload == "locked")
@@ -85,6 +107,11 @@ class MQratgdo(udi_interface.Node):
     def lk_unlock(self, command):
         self.controller.mqtt_pub(self.cmd_topic + "lock", "unlock")
 
+    def m_clear(self, command=None):
+        self.controller.mqtt_pub(self.device["status_topic"] + "/status/motion", "Clear")
+        self.setDriver("GV2", 0)
+        self.motion = False
+
     def query(self, command=None):
         """
         Called by ISY to report all drivers for this node. This is done in
@@ -115,6 +142,7 @@ class MQratgdo(udi_interface.Node):
         "CLOSE": dr_close,
         "STOP": dr_stop,
         "LOCK": lk_lock,
-        "UNLOCK": lk_unlock
+        "UNLOCK": lk_unlock,
+        "MCLEAR": m_clear
         }
     

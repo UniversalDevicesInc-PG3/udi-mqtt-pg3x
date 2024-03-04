@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -10,12 +10,13 @@ was made for DS18B20 waterproof
 """
 
 import udi_interface
+import json
 
 LOGGER = udi_interface.LOGGER
 
 class MQds(udi_interface.Node):
-    id = "mqds"
-    
+    id = 'mqds'
+
     """
     This is the class that all the Nodes will be represented by. You will
     add this to Polyglot/ISY with the interface.addNode method.

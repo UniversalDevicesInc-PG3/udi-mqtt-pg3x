@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -15,7 +15,7 @@ import json
 LOGGER = udi_interface.LOGGER
 
 class MQDimmer(udi_interface.Node):
-    id = "mqdimmer"
+    id = 'mqdimmer'
     
     """
     This is the class that all the Nodes will be represented by. You will

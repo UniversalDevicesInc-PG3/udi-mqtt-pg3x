@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -10,11 +10,12 @@ able to set colours and run different transition programs
 """
 
 import udi_interface
+import json
 
 LOGGER = udi_interface.LOGGER
 
 class MQRGBWstrip(udi_interface.Node):
-    id = "mqrgbw"
+    id = 'mqrgbw'
     
     """
     This is the class that all the Nodes will be represented by. You will

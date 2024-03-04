@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -7,11 +7,12 @@ node MQSensor
 """
 
 import udi_interface
+import json
 
 LOGGER = udi_interface.LOGGER
 
 class MQSensor(udi_interface.Node):
-    id = "mqsens"
+    id = 'mqsens'
     
     """
     This is the class that all the Nodes will be represented by. You will
@@ -124,7 +125,7 @@ class MQSensor(udi_interface.Node):
         self.reportDrivers()
         
     # all the drivers - for reference
-   drivers = [
+    drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "CLITEMP", "value": 0, "uom": 17},
         {"driver": "GPV", "value": 0, "uom": 17},

@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -14,7 +14,7 @@ import json
 LOGGER = udi_interface.LOGGER
 
 class MQs31(udi_interface.Node):
-    id = "mqs31"
+    id = 'mqs31'
     
     """
     This is the class that all the Nodes will be represented by. You will

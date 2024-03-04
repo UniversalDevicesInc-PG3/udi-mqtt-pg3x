@@ -1,5 +1,5 @@
 <nodeDefs>
-    <nodeDef id="MQCTRL" nls="CTRL">
+    <nodeDef id="mqctrl" nls="CTRL">
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
@@ -8,10 +8,11 @@
             <sends />
             <accepts>
                 <cmd id="DISCOVER" />
+                <cmd id="QUERY" />
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQSW" nls="SWITCH">
+    <nodeDef id="mqsw" nls="SWITCH">
         <editors />
         <sts>
             <st id="ST" editor="ONOFF" />
@@ -28,7 +29,28 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQFAN" nls="IFAN">
+  <nodeDef id="mqdimmer" nls="DIMMER">
+        <editors />
+        <sts>
+            <st id="ST" editor="ST_DIMMER" />
+        </sts>
+        <cmds>
+            <sends>
+                <cmd id="DON" />
+                <cmd id="DOF" />
+            </sends>
+            <accepts>
+                <cmd id="QUERY" />
+                <cmd id="DON" >
+                    <p id="" editor="ST_DIMMER" optional='T' init='ST' />
+                </cmd>
+                <cmd id="DOF" />
+                <cmd id="BRT" />
+                <cmd id="DIM" />
+            </accepts>
+        </cmds>
+    </nodeDef>
+    <nodeDef id="mqfan" nls="IFAN">
         <editors />
         <sts>
             <st id="ST" editor="ST_FAN" />
@@ -49,7 +71,7 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQSENS" nls="SENSOR">
+    <nodeDef id="mqsens" nls="SENSOR">
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
@@ -83,7 +105,22 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQDHT" nls="DHT">
+        <nodeDef id="mqflag" nls="FLAG">
+        <editors />
+        <sts>
+            <st id="ST" editor="ST_FLAG" />
+        </sts>
+        <cmds>
+          <sends>
+            <cmd id="RESET" />
+        </sends>
+            <accepts>
+                <cmd id="QUERY" />
+                <cmd id="RESET" />
+            </accepts>
+        </cmds>
+    </nodeDef>
+    <nodeDef id="mqdht" nls="DHT">
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
@@ -98,7 +135,7 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQDS" nls="DS">
+    <nodeDef id="mqds" nls="DS">
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
@@ -111,7 +148,7 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQBME" nls="BME">
+    <nodeDef id="mqbme" nls="BME">
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
@@ -126,7 +163,7 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQHCSR" nls="SR04">
+    <nodeDef id="mqhcsr" nls="SR04">
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
@@ -139,7 +176,23 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQANAL" nls="ANALOG">
+    <nodeDef id="mqshflood" nls="FLOOD">
+        <editors />
+        <sts>
+            <st id="ST" editor="BOOL" />
+            <st id="CLITEMP" editor="TEMPF" />
+            <st id="GV0" editor="BOOL" />
+            <st id="BATLVL" editor="BATTERY" />
+            <st id="GPV" editor="ANALOG" />
+        </sts>
+        <cmds>
+            <sends />
+            <accepts>
+                <cmd id="QUERY" />
+            </accepts>
+        </cmds>
+    </nodeDef>
+    <nodeDef id="mqanal" nls="ANALOG">
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
@@ -152,7 +205,7 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQS31" nls="S31">
+    <nodeDef id="mqs31" nls="S31">
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
@@ -169,22 +222,7 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQFLAG" nls="flag">
-        <editors />
-        <sts>
-            <st id="ST" editor="ST_FLAG" />
-        </sts>
-        <cmds>
-          <sends>
-            <cmd id="RESET" />
-        </sends>
-            <accepts>
-                <cmd id="QUERY" />
-                <cmd id="RESET" />
-            </accepts>
-        </cmds>
-    </nodeDef>
-    <nodeDef id="MQR" nls="RAW">
+    <nodeDef id="mqr" nls="RAW">
         <editors />
         <sts>
             <st id="ST" editor="ST_FLAG" />
@@ -198,7 +236,7 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="MQRGBW" nls="STRIP">
+    <nodeDef id="mqrgbw" nls="STRIP">
         <editors />
         <sts>
             <st id="GV0" editor="ONOFF" />
@@ -229,40 +267,37 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="SHFLOOD" nls="FLOOD">
+    <nodeDef id="mqratgdo" nls="RATGDO">
         <editors />
         <sts>
-            <st id="ST" editor="BOOL" />
-            <st id="CLITEMP" editor="TEMPF" />
-            <st id="GV0" editor="BOOL" />
-            <st id="BATLVL" editor="BATTERY" />
-            <st id="GPV" editor="ANALOG" />
-        </sts>
-        <cmds>
-            <sends />
-            <accepts>
-                <cmd id="QUERY" />
-            </accepts>
-        </cmds>
-    </nodeDef>
-    <nodeDef id="MQDIMMER" nls="DIMMER">
-        <editors />
-        <sts>
-            <st id="ST" editor="ST_DIMMER" />
+            <st id="ST" editor="GAVAIL" />
+            <st id="GV0" editor="GLIGHT" />
+            <st id="GV1" editor="GDOOR" />
+            <st id="GV2" editor="GMOTION" />
+            <st id="GV3" editor="GLOCK" />
+            <st id="GV4" editor="GOBST" />
         </sts>
         <cmds>
             <sends>
                 <cmd id="DON" />
                 <cmd id="DOF" />
+                <cmd id="OPEN" />
+                <cmd id="CLOSE" />
+                <cmd id="STOP" />
+                <cmd id="LOCK" />
+                <cmd id="UNLOCK" />
+                <cmd id="MCLEAR" />
             </sends>
             <accepts>
                 <cmd id="QUERY" />
-                <cmd id="DON" >
-                    <p id="" editor="ST_DIMMER" optional='T' init='ST' />
-                </cmd>
+                <cmd id="DON" />
                 <cmd id="DOF" />
-                <cmd id="BRT" />
-                <cmd id="DIM" />
+                <cmd id="OPEN" />
+                <cmd id="CLOSE" />
+                <cmd id="STOP" />
+                <cmd id="LOCK" />
+                <cmd id="UNLOCK" />
+                <cmd id="MCLEAR" />
             </accepts>
         </cmds>
     </nodeDef>

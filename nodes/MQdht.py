@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -10,11 +10,12 @@ It was originally developed with an AM2301
 """
 
 import udi_interface
+import json
 
 LOGGER = udi_interface.LOGGER
 
 class MQdht(udi_interface.Node):
-    id = "mqdht"
+    id = 'mqdht'
     
     """
     This is the class that all the Nodes will be represented by. You will

@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -7,11 +7,12 @@ node MQFan
 """
 
 import udi_interface
+import json
 
 LOGGER = udi_interface.LOGGER
 
 class MQFan(udi_interface.Node):
-    id = "mqfan"
+    id = 'mqfan'
     
     """
     This is the class that all the Nodes will be represented by. You will
@@ -31,6 +32,7 @@ class MQFan(udi_interface.Node):
         self.fan_speed = 0
 
     def updateInfo(self, payload, topic: str):
+        fan_speed = 0
         try:
             json_payload = json.loads(payload)
             fan_speed = int(json_payload['FanSpeed'])

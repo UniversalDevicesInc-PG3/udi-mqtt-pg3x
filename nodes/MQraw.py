@@ -1,5 +1,5 @@
 """
-mqtt-poly NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
@@ -12,7 +12,7 @@ import udi_interface
 LOGGER = udi_interface.LOGGER
 
 class MQraw(udi_interface.Node):
-    id = "mqr"
+    id = 'mqr'
     
     """
     This is the class that all the Nodes will be represented by. You will

@@ -1,9 +1,9 @@
 """
-udi-framework-pg3 NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2024
 
-node_MQswitch
+node MQswitch
 """
 
 import udi_interface
@@ -11,7 +11,7 @@ import udi_interface
 LOGGER = udi_interface.LOGGER
 
 class MQSwitch(udi_interface.Node):
-    id = "MQSW"
+    id = 'mqsw'
     
     """
     This is the class that all the Nodes will be represented by. You will
@@ -91,10 +91,10 @@ class MQSwitch(udi_interface.Node):
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
     this tells it which method to call. DON calls setOn, etc.
     """
-    hint = [4, 2, 0, 0]
-
     commands = {
         "QUERY": query,
         "DON": cmd_on,
         "DOF": cmd_off}
+
+    hint = [4, 2, 0, 0]
 
