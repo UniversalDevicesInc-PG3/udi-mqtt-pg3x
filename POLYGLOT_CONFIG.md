@@ -1,6 +1,6 @@
 # MQTT Nodeserver for Devices
 
-[![license]][localLicense]
+[![license][license]][localLicense]
 
 This Poly provides an interface between MQTT broker and [Polyglot PG3][poly] server.
 
