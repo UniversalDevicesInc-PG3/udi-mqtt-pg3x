@@ -8,8 +8,7 @@ This Poly provides an interface between MQTT broker and Polyglot v3 server.
 You can install the Node Server from the Polyglot store 
 
 ### Notes
-
-This BETA version has added a DIMMER module and expanded ANALOG to include A0, Temperature, Illuminance, Range, pH and MQX. "Query" may not work!
+This version has added a DIMMER module and expanded ANALOG to include A0, Temperature, Illuminance, Range, pH and MQX.
 It now also allows for multiple sensors on the same device. Each device gets its own node.
 
 Please report any problems on the UDI user forum.

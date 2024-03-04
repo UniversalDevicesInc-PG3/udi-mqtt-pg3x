@@ -106,6 +106,7 @@ ND-mqbme-NAME = MQTT BME
 ND-mqbme-ICON = TempSensor
 ST-BME-CLITEMP-NAME = Temperature
 ST-BME-CLIHUM-NAME = Humidity
+ST-BME-DEWPT-NAME = Dew Point
 ST-BME-BARPRES-NAME = Pressure
 ST-BME-ST-NAME = Status
 
