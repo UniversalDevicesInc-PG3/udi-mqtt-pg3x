@@ -1,9 +1,9 @@
 # LABELS for the Admin Console
 
 # controller
-ND_mqctrl_NAME = MQTT Controller
+ND-mqctrl-NAME = MQTT Controller
 ND-mqctrl-ICON = GenericCtl
-CMD-CTRL-DISCOVER-NAME = Re-Discover
+CMD-CTRL-DISCOVER-NAME = Discover
 CMD-CTRL-QUERY-NAME = Query
 ST-CTRL-ST-NAME = NodeServer Online
 
