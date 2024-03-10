@@ -16,7 +16,7 @@ VERSION = '0.0.36'
 """
 0.0.36
 DONE re-factor files separating controller and nodes
-TODO fix adding & removal of nodes during start-up and/or discovery
+DONE fix adding & removal of nodes during start-up and/or discovery
 """
 
 from nodes import Controller

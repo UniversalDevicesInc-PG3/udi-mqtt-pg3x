@@ -120,11 +120,6 @@ class Controller(udi_interface.Node):
     def start(self):
         self.Notices['hello'] = 'Start-up'
 
-        while self.valid_configuration is False:
-            LOGGER.info('Waiting on valid configuration')
-            self.Notices['waiting'] = 'Waiting on valid configuration'
-            time.sleep(5)
-
         self.last = 0.0
         # Send the profile files to the ISY if neccessary. The profile version
         # number will be checked and compared. If it has changed since the last
@@ -139,6 +134,11 @@ class Controller(udi_interface.Node):
         # to do during start.  Note that it is not required to have a
         # heartbeat in your node server
         self.heartbeat(True)
+
+        while self.valid_configuration is False:
+            LOGGER.info('Waiting on valid configuration')
+            self.Notices['waiting'] = 'Waiting on valid configuration'
+            time.sleep(5)
 
         # get user mqtt server connection going
         self.mqttc = mqtt.Client()
