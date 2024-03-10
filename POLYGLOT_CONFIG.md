@@ -14,15 +14,16 @@ You will need a MQTT broker running (can be on RPi running Polyglot)
 
 ### Custom Parameters
 
-You will need to define the following custom parameters:
+You will need to define the following custom parameters:  
+mqtt server, port, user, & password are only required if using an external mqtt server you set up
 
-#### `mqtt_server`  - (default = 'localhost')
+#### `mqtt_server`  - (default = 'localhost') :not required if using MQTT on EISY/Polisy
 
-#### `mqtt_port` -  (default = 1884) :do not change, if using MQTT on PG3x
+#### `mqtt_port` -  (default = 1884) :do not change if using MQTT on EISY/Polisy
 
 #### `mqtt_user` - (default = admin) :not required if using MQTT on EISY/Polisy
 
-#### `mqtt_password` - (default = admin) :not required for PG3x
+#### `mqtt_password` - (default = admin) :not required if using MQTT on EISY/Polisy
 
 #### `devfile` - yaml file of devices, status & command topics
 
