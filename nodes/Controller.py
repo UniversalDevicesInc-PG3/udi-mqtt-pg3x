@@ -281,6 +281,7 @@ class Controller(udi_interface.Node):
         if 'longPoll' in flag:
             LOGGER.debug('longPoll re-parse updateallfromserver (controller)')
         else:
+            self.heartbeat()
             LOGGER.debug('shortPoll check for events (controller)')
 
     def query(self, command = None):
