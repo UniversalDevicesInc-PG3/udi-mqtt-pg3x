@@ -1,0 +1,92 @@
+[
+  {
+    "id": "mqswitch",
+    "type": "switch",
+    "status_topic": "test/status/switch",
+    "cmd_topic": "test/control/switch"
+  },
+  {
+    "id": "mqdimmer",
+    "type": "dimmer",
+    "status_topic": "test/status/dimmer",
+    "cmd_topic": "test/control/dimmer"
+  },
+  {
+    "id": "mqfan",
+    "type": "ifan",
+    "status_topic": "test/status/fan",
+    "cmd_topic": "test/control/fan"
+  },
+  {
+    "id": "mqsens",
+    "type": "sensor",
+    "status_topic": "test/status/sensor",
+    "cmd_topic": "test/control/sensor"
+  },
+  {
+    "id": "mqflag",
+    "type": "flag",
+    "status_topic": "test/status/flag",
+    "cmd_topic": "test/control/fag"
+  },
+  {
+    "id": "mqdht",
+    "type": "TempHumid",
+    "status_topic": "test/status/dht",
+    "cmd_topic": "test/control/dht"
+  },
+  {
+    "id": "mqds",
+    "type": "Temp",
+    "status_topic": "test/status/ds",
+    "cmd_topic": "test/control/ds"
+  },
+  {
+    "id": "mqbme",
+    "type": "TempHumidPress",
+    "status_topic": "test/status/bme",
+    "cmd_topic": "test/control/bme"
+  },
+  {
+    "id": "mqhcsr",
+    "type": "distance",
+    "status_topic": "test/status/hcsr",
+    "cmd_topic": "test/control/hcsr"
+  },
+{
+    "id": "mqshflood",
+    "type": "shellyflood",
+    "status_topic": "test/status/shflood",
+    "cmd_topic": "test/control/shflood"
+  },
+{
+    "id": "mqanalog",
+    "type": "analog",
+    "status_topic": "test/status/analog",
+    "cmd_topic": "test/control/analog"
+  },
+{
+    "id": "mqs31",
+    "type": "s31",
+    "status_topic": "test/status/s31",
+    "cmd_topic": "test/control/s31"
+  },
+{
+    "id": "mqraw",
+    "type": "raw",
+    "status_topic": "test/status/raw",
+    "cmd_topic": "test/control/raw"
+  },
+{
+    "id": "mqrgbw",
+    "type": "RGBW",
+    "status_topic": "test/status/rgbw",
+    "cmd_topic": "test/control/rgbw"
+  },
+  {
+    "id": "mqratgdo",
+    "type": "ratgdo",
+    "status_topic": "test/status/garage",
+    "cmd_topic": "test/control/garage"
+  }
+]

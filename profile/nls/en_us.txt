@@ -1,22 +1,33 @@
 # LABELS for the Admin Console
 
 # controller
-ND-MQCTRL-NAME = MQTT Controller
-ND-MQCTRL-ICON = GenericCtl
-CMD-CTRL-DISCOVER-NAME = Re-Discover
+ND-mqctrl-NAME = MQTT Controller
+ND-mqctrl-ICON = GenericCtl
+CMD-CTRL-DISCOVER-NAME = Discover
+CMD-CTRL-QUERY-NAME = Query
 ST-CTRL-ST-NAME = NodeServer Online
 
 # switch
-ND-MQSW-NAME = MQTT Switch
-ND-MQSW-ICON = GenericRsp
+ND-mqsw-NAME = MQTT Switch
+ND-mqsw-ICON = GenericRsp
 ST-SWITCH-ST-NAME = Status
 
 CMD-SWITCH-DON-NAME = On
 CMD-SWITCH-DOF-NAME = Off
 
+# dimmer
+ND-mqdimmer-NAME = MQTT Dimmer
+ND-mqdimmer-ICON = GenericRsp
+ST-DIMMER-ST-NAME = Status
+
+CMD-DIMMER-DON-NAME = On
+CMD-DIMMER-DOF-NAME = Off
+CMD-DIMMER-BRT-NAME = Brighten
+CMD-DIMMER-DIM-NAME = Dim
+
 # ifan
-ND-MQFAN-NAME = MQTT Fan
-ND-MQFAN-ICON = GenericRsp
+ND-mqfan-NAME = MQTT Fan
+ND-mqfan-ICON = GenericRsp
 ST-IFAN-ST-NAME = Status
 
 CMD-IFAN-DON-NAME = On
@@ -30,8 +41,8 @@ FANSPEED-2 = Medium
 FANSPEED-3 = High
 
 # sensor
-ND-MQSENS-NAME = MQTT Sensor
-ND-MQSENS-ICON = MotionSensor
+ND-mqsens-NAME = MQTT Sensor
+ND-mqsens-ICON = MotionSensor
 ST-SENSOR-ST-NAME = Motion detected
 ST-SENSOR-CLITEMP-NAME = Temperature
 ST-SENSOR-CLIHUM-NAME = Humidity
@@ -56,71 +67,9 @@ CMDP-D-NAME = Transition
 
 PGM-CMD-SETLED-FMT = /R// Red ${v}/ /G// Green ${v}/ /B// Blue ${v}/ /I// Brightness ${v}/ /D// in ${v}/ /F//, flash for ${v}/
 
-# am2301
-ND-MQDHT-NAME = MQTT AM2301
-ND-MQDHT-ICON = TempSensor
-ST-DHT-CLITEMP-NAME = Temperature
-ST-DHT-CLIHUM-NAME = Humidity
-ST-DHT-DEWPT-NAME = Dew Point
-ST-DHT-ST-NAME = Status
-
-# ds18b20
-ND-MQDS-NAME = MQTT DS18B20
-ND-MQDS-ICON = TempSensor
-ST-DS-CLITEMP-NAME = Temperature
-ST-DS-ST-NAME = Status
-
-# bme280
-ND-MQBME-NAME = MQTT BME
-ND-MQBME-ICON = TempSensor
-ST-BME-CLITEMP-NAME = Temperature
-ST-BME-CLIHUM-NAME = Humidity
-ST-BME-DEWPT-NAME = Dew Point
-ST-BME-BARPRES-NAME = Pressure
-ST-BME-ST-NAME = Status
-
-# SR04
-ND-MQHCSR-NAME = MQTT AM2301
-ND-MQHCSR-ICON = Input
-ST-SR04-DISTANC-NAME = Distance
-ST-SR04-ST-NAME = Status
-
-# Shelly Flood
-ND-SHFLOOD-NAME = MQTT Shelly Flood
-ND-SHFLOOD-ICON = TempSensor
-CMD-FLOOD-QUERY-NAME = Query
-ST-FLOOD-CLITEMP-NAME = Temperature
-ST-FLOOD-GV0-NAME = Leak Detected
-ST-FLOOD-BATLVL-NAME = Battery Level
-ST-FLOOD-GPV-NAME = Error Code
-ST-FLOOD-ST-NAME = Status
-
-# analog
-ND-MQANAL-NAME = MQTT Analog
-ND-MQANAL-ICON = Input
-ST-ANALOG-GPV-NAME = Analog
-ST-ANALOG-ST-NAME = Status
-
-# s31
-ND-MQS31-NAME = MQTT S31 Energy
-ND-MQS31-ICON = EnergyMonitor
-ST-S31-CURRENT-NAME = Current
-ST-S31-CURPOW-NAME = Current Power
-ST-S31-VOLT-NAME = Voltage
-ST-S31-FACTOR-NAME = Power Factor
-ST-S31-TOTPOW-NAME = Total Power
-ST-S31-ST-NAME = Status
-
-# Raw
-ND-MQR-NAME = MQTT Raw
-ND-MQR-ICON = Input
-ST-RAW-ST-NAME = Status
-ST-RAW-GV1-NAME = Raw Value
-CMD-RAW-QUERY-NAME = Query
-
 # flag
-ND-MQFLAG-NAME = MQTT FLAG
-ND-MQFLAG-ICON = GenericCtl
+ND-mqflag-NAME = MQTT FLAG
+ND-mqflag-ICON = GenericCtl
 CMD-FLAG-QUERY-NAME = Query
 CMD-FLAG-RESET-NAME = Reset
 ST-FLAG-ST-NAME = Flag Status
@@ -138,9 +87,71 @@ FLAG-10 = ON
 FLAG-11 = OFF
 FLAG-12 = ---
 
+# am2301
+ND-mqdht-NAME = MQTT AM2301
+ND-mqdht-ICON = TempSensor
+ST-DHT-CLITEMP-NAME = Temperature
+ST-DHT-CLIHUM-NAME = Humidity
+ST-DHT-DEWPT-NAME = Dew Point
+ST-DHT-ST-NAME = Status
+
+# ds18b20
+ND-mqds-NAME = MQTT DS18B20
+ND-mqds-ICON = TempSensor
+ST-DS-CLITEMP-NAME = Temperature
+ST-DS-ST-NAME = Status
+
+# bme280
+ND-mqbme-NAME = MQTT BME
+ND-mqbme-ICON = TempSensor
+ST-BME-CLITEMP-NAME = Temperature
+ST-BME-CLIHUM-NAME = Humidity
+ST-BME-DEWPT-NAME = Dew Point
+ST-BME-BARPRES-NAME = Pressure
+ST-BME-ST-NAME = Status
+
+# SR04
+ND-mqhcsr-NAME = MQTT AM2301
+ND-mqhcsr-ICON = Input
+ST-SR04-DISTANC-NAME = Distance
+ST-SR04-ST-NAME = Status
+
+# Shelly Flood
+ND-mqshflood-NAME = MQTT Shelly Flood
+ND-mqshflood-ICON = TempSensor
+CMD-FLOOD-QUERY-NAME = Query
+ST-FLOOD-CLITEMP-NAME = Temperature
+ST-FLOOD-GV0-NAME = Leak Detected
+ST-FLOOD-BATLVL-NAME = Battery Level
+ST-FLOOD-GPV-NAME = Error Code
+ST-FLOOD-ST-NAME = Status
+
+# analog
+ND-mqanal-NAME = MQTT Analog
+ND-mqanal-ICON = Input
+ST-ANALOG-GPV-NAME = Analog In
+ST-ANALOG-ST-NAME = Status
+
+# s31
+ND-mqs31-NAME = MQTT S31 Energy
+ND-mqs31-ICON = EnergyMonitor
+ST-S31-CURRENT-NAME = Current
+ST-S31-CURPOW-NAME = Current Power
+ST-S31-VOLT-NAME = Voltage
+ST-S31-FACTOR-NAME = Power Factor
+ST-S31-TOTPOW-NAME = Total Power
+ST-S31-ST-NAME = Status
+
+# Raw
+ND-mqr-NAME = MQTT Raw
+ND-mqr-ICON = Input
+ST-RAW-ST-NAME = Status
+ST-RAW-GV1-NAME = Raw Value
+CMD-RAW-QUERY-NAME = Query
+
 # rgbw strip
-ND-MQRGBW-NAME = MQTT RGBW Strip
-ND-MQSENS-ICON = GenericCtl
+ND-mqrgbw-NAME = MQTT RGBW Strip
+ND-mqrgbw-ICON = GenericCtl
 
 ST-STRIP-GV0-NAME = OnOff
 ST-STRIP-GV1-NAME = Brightness
@@ -163,19 +174,9 @@ CMDP-STRIPP-NAME = Program
 
 PGM-CMD-SETRGBW-FMT = /STRIPR// Red ${v}/ /STRIPG// Green ${v}/ /STRIPB// Blue ${v}/ /STRIPW// White ${v}/ /STRIPI// Brightness ${v}/ /STRIPP// Program ${v}/
 
-# dimmer
-ND-MQDIMMER-NAME = MQTT Dimmer
-ND-MQDIMMER-ICON = GenericRsp
-ST-DIMMER-ST-NAME = Status
-
-CMD-DIMMER-DON-NAME = On
-CMD-DIMMER-DOF-NAME = Off
-CMD-DIMMER-BRT-NAME = Brighten
-CMD-DIMMER-DIM-NAME = Dim
-
 # ratgdo garage
-ND-MQRATGDO-NAME = MQTT ratgdo garage
-ND-MQRATGDO-ICON = GenericRspCtl
+ND-mqratgdo-NAME = MQTT Ratgdo
+ND-mqratgdo-ICON = GenericRspCtl
 
 CMD-RATGDO-QUERY-NAME = Query
 CMD-RATGDO-LIGHT-NAME = Light
@@ -191,6 +192,8 @@ CMD-RATGDO-STOP-NAME = Stop
 
 CMD-RATGDO-LOCK-NAME = Lock
 CMD-RATGDO-UNLOCK-NAME = Unlock
+
+CMD-RATGDO-MCLEAR-NAME = M-Clear
 
 ST-RATGDO-ST-NAME = Availability
 ST-RATGDO-GV0-NAME = Light
@@ -219,4 +222,3 @@ GOBST-1 = Obstructed
 
 GLOCK-0 = Unlocked
 GLOCK-1 = Locked
-
