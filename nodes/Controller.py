@@ -77,6 +77,7 @@ class Controller(udi_interface.Node):
         # Maps to device IDs
         self.status_topics_to_devices: Dict[str, str] = {}
         self.valid_configuration = False
+        self.parmDone = False
 
         # Create data storage classes to hold specific data that we need
         # to interact with.  
@@ -114,7 +115,7 @@ class Controller(udi_interface.Node):
 
     def wait_for_node_done(self):
         while len(self.n_queue) == 0:
-            time.sleep(0.1)
+            time.sleep(0.3)
         self.n_queue.pop()
 
     def start(self):
@@ -146,6 +147,9 @@ class Controller(udi_interface.Node):
         self.mqttc.on_disconnect = self._on_disconnect
         self.mqttc.on_message = self._on_message
         self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
+        while self.parmDone !=True:
+            LOGGER.info("Waiting on first Discovery Completion")
+            time.sleep(1)
         try:
             self.mqttc.connect(self.mqtt_server, self.mqtt_port, 10)
             self.mqttc.loop_start()
@@ -182,7 +186,7 @@ class Controller(udi_interface.Node):
         LOGGER.debug('Loading parameters now')
         if self.checkParams():
             self.discover()
-
+            self.parmDone = True
 
     """
     Called via the CUSTOMTYPEDPARAMS event. This event is sent When
@@ -516,24 +520,8 @@ class Controller(udi_interface.Node):
 
     def _on_connect(self, mqttc, userdata, flags, rc):
         if rc == 0:
-            LOGGER.info("Poly MQTT Connected, subscribing...")
-            results = []
-            for stopic in self.status_topics:
-                results.append((stopic, tuple(self.mqttc.subscribe(stopic))))
-            for (topic, (result, mid)) in results:
-                if result == 0:
-                    LOGGER.info(
-                        "Subscribed to {} MID: {}, res: {}".format(topic, mid, result)
-                    )
-                else:
-                    LOGGER.error(
-                        "Failed to subscribe {} MID: {}, res: {}".format(
-                            topic, mid, result
-                        )
-                    )
-            for node in self.poly.getNodes():
-                if node != self.address:
-                    self.poly.getNode(node).query()
+            LOGGER.info("Poly MQTT Connected")
+            self.mqtt_subscribe()
         else:
             LOGGER.error("Poly MQTT Connect failed")
 
@@ -607,6 +595,28 @@ class Controller(udi_interface.Node):
 
     def mqtt_pub(self, topic, message):
         self.mqttc.publish(topic, message, retain=False)
+
+    def mqtt_subscribe(self):
+        LOGGER.info("Poly MQTT subscribing...")
+        result = 255
+        results = []
+        for stopic in self.status_topics:
+            results.append((stopic, tuple(self.mqttc.subscribe(stopic))))
+        for (topic, (result, mid)) in results:
+            if result == 0:
+                LOGGER.info(
+                    "Subscribed to {} MID: {}, res: {}".format(topic, mid, result)
+                )
+            else:
+                LOGGER.error(
+                    "Failed to subscribe {} MID: {}, res: {}".format(
+                        topic, mid, result
+                    )
+                )
+        for node in self.poly.getNodes():
+            if node != self.address:
+                self.poly.getNode(node).query()
+        LOGGER.info("Subscriptions Done")
 
 
     # Status that this node has. Should match the 'sts' section

@@ -11,9 +11,15 @@ import sys
 
 LOGGER = udi_interface.LOGGER
 
-VERSION = '0.0.37'
+VERSION = '0.0.39'
 
 """
+0.0.39
+DEBUG discover bug fix
+
+0.0.38
+DONE change node throttling timer from 0.1s to 0.2s
+
 0.0.37
 DONE re-factor files separating controller and nodes
 DONE fix adding & removal of nodes during start-up and/or discovery
