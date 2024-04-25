@@ -115,7 +115,7 @@ class Controller(udi_interface.Node):
 
     def wait_for_node_done(self):
         while len(self.n_queue) == 0:
-            time.sleep(0.2)
+            time.sleep(0.3)
         self.n_queue.pop()
 
     def start(self):
