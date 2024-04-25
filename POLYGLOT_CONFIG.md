@@ -129,8 +129,8 @@ The 'id' and 'name' can be different
 
 [license]: https://img.shields.io/github/license/mashape/apistatus.svg
 [localLicense]: https://github.com/Trilife/udi-mqtt-pg3x/blob/main/LICENSE
-[poly]: https://github.com/UniversalDevicesInc/pg3-dist
-[forum]: https://forum.universal-devices.com/topic/24538-sonoff/?tab=comments#comment-244571
+[poly]: https://github.com/Trilife/udi-mqtt-pg3x
+[forum]: https://forum.universal-devices.com/forum/315-mqtt/
 [sonoff]: https://forum.universal-devices.com/topic/24538-sonoff
 [s31]: https://www.itead.cc/sonoff-s31.html
 [ifan]: https://itead.cc/product/sonoff-ifan03-wi-fi-ceiling-fan-and-light-controller/
