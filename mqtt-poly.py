@@ -11,9 +11,12 @@ import sys
 
 LOGGER = udi_interface.LOGGER
 
-VERSION = '0.0.38'
+VERSION = '0.0.39'
 
 """
+0.0.39
+DEBUG discover bug fix
+
 0.0.38
 DONE change node throttling timer from 0.1s to 0.2s
 
