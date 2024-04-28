@@ -16,7 +16,7 @@
             </accepts>
         </cmds>
     </nodeDef>
-    <nodeDef id="mqsw" nls="SWITCH">
+    <nodeDef id="MQSW" nls="SWITCH">
         <editors />
         <sts>
             <st id="ST" editor="ONOFF" />

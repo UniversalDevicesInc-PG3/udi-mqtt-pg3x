@@ -74,6 +74,10 @@ target/
 
 #Project specific
 polyinterface
-/*.cert
+*.cert
 *.key
 *.pid
+.saves/
+
+
+/.#development.md
