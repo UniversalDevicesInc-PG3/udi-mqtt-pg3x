@@ -11,7 +11,7 @@ import udi_interface
 LOGGER = udi_interface.LOGGER
 
 class MQSwitch(udi_interface.Node):
-    id = 'mqsw'
+    id = 'MQSW'
     
     """
     This is the class that all the Nodes will be represented by. You will

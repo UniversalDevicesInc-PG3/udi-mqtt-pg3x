@@ -8,8 +8,8 @@ CMD-CTRL-QUERY-NAME = Query
 ST-CTRL-ST-NAME = NodeServer Online
 
 # switch
-ND-mqsw-NAME = MQTT Switch
-ND-mqsw-ICON = GenericRsp
+ND-MQSW-NAME = MQTT Switch
+ND-MQSW-ICON = GenericRsp
 ST-SWITCH-ST-NAME = Status
 
 CMD-SWITCH-DON-NAME = On
@@ -222,3 +222,7 @@ GOBST-1 = Obstructed
 
 GLOCK-0 = Unlocked
 GLOCK-1 = Locked
+
+ONOFF-0 = Off
+ONOFF-1 = On
+ONOFF-100 = On
