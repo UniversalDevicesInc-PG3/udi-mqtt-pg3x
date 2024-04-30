@@ -18,6 +18,7 @@ VERSION = '0.40.0'
 DONE change numbering to allow for branch management
 DONE raw to allow int
 DONE find topic by topic if no device_id find
+DONE config.md fixes
 
 0.0.39
 DEBUG discover bug fix

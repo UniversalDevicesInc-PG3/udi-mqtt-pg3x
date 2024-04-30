@@ -69,7 +69,7 @@ see [**ratgdo site**](https://paulwieland.github.io/ratgdo/)
 
 ##### `"status_topic":`
 
-- For switch this will be the cmnd topic (like `cmnd/sonoff1/power`),  
+- For switch this will be the cmnd topic (like `cmnd/sonoff1/POWER`),  
 but on sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`).  
 For Shelly Floods, this will be an array, like  
 `[ "shellies/shellyflood-<unique-id>/sensor/temperature", "shellies/shellyflood-<unique-id>/sensor/flood" ]`  
@@ -122,7 +122,7 @@ devices:
   name: "Wemos SW"
   type: "switch"
   status_topic: "stat/Wemos32/POWER"
-  cmd_topic: "cmnd/Wemos32/power"
+  cmd_topic: "cmnd/Wemos32/POWER"
 
 - ** Note the topic (Wemos32) is the same for all sensors on the same device \
 The 'id' and 'name' can be different
