@@ -18,7 +18,41 @@ VERSION = '0.40.0'
 DONE change numbering to allow for branch management
 DONE raw to allow int
 DONE find topic by topic if no device_id find
-DONE config.md fixes
+FIXME config.md fixes
+FIXME status for switch device available in programs
+
+Current TODO list from forum:
+
+As the title suggests, please add your bugs, suggestions, and improvement thoughts here. 
+I will update this post as ideas make the list and are prioritized.
+
+*** Putting up into Beta under MQTT-poly for the brave to try out and give feedback.
+
+DONE: Changed versioning so git branches and hot fixes can work.
+        so 0.40.0 means it will be on branch 0.40 with the last .0
+        reserved for hotfixes.  These will then be pushed by PG3 to users
+DONE: Switch make Status available in IF for programs
+DONE: Parameters are not initially populated, plugin uses the following defaults:
+        mqtt_server = LocalHost
+        mqtt_port = 1884
+        mutt-user = admin (same as None)
+        mqtt_password = admin (same as None)
+STARTED: CONFIG.MD, changed references of power to POWER. (please feel free to suggest other improvements to the docs)
+HELP: S31 debug:  ****need some specifics here of what is happening, logs aways help
+HELP: iFan debug: ****need some specifics here of what is happening, logs aways help
+NEXT: internal: improve logging for debug
+NEXT: make discover button also update Matt subscriptions
+
+Query is not consistent across the devices
+
+Tasmota potential automation opportunities in discovery
+
+Multiple-Analog clean-up
+
+simplify devlist/devfile by using 'defaults' for status_topic and cmd_topic. (They are mostly a combination of 'id' and a set of repetitive strings). This could reduce configuration pain by 80% and typos by 90%. Minimum need: 'id:' and 'type:' optional 'name:'
+
+Google Assistant is not reporting device status consistently: it shows correctly for a few seconds and then goes to 'OFF'
+
 
 0.0.39
 DEBUG discover bug fix
@@ -29,6 +63,7 @@ DONE change node throttling timer from 0.1s to 0.2s
 0.0.37
 DONE re-factor files separating controller and nodes
 DONE fix adding & removal of nodes during start-up and/or discovery
+
 """
 
 from nodes import Controller
