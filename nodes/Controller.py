@@ -137,7 +137,7 @@ class Controller(udi_interface.Node):
         self.heartbeat(True)
 
         while self.valid_configuration is False:
-            LOGGER.info('Waiting on valid configuration')
+            LOGGER.info('Start: Waiting on valid configuration')
             self.Notices['waiting'] = 'Waiting on valid configuration'
             time.sleep(5)
 
@@ -148,7 +148,7 @@ class Controller(udi_interface.Node):
         self.mqttc.on_message = self._on_message
         self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
         while self.parmDone !=True:
-            LOGGER.info("Waiting on first Discovery Completion")
+            LOGGER.info("Start: Waiting on first Discovery Completion")
             time.sleep(1)
         try:
             self.mqttc.connect(self.mqtt_server, self.mqtt_port, 10)
@@ -156,10 +156,10 @@ class Controller(udi_interface.Node):
         except Exception as ex:
             LOGGER.error("Error connecting to Poly MQTT broker {}".format(ex))
             self.Notices['mqtt'] = 'Error on user MQTT connection'
-            # return False ; not compatible with start
+
         connected = self.mqttc.is_connected()
         while connected != True:
-            LOGGER.error('Waiting on user MQTT connection')
+            LOGGER.error('Start: Waiting on user MQTT connection')
             self.Notices['mqtt'] = 'Waiting on user MQTT connection'
             time.sleep(3)
             connected = self.mqttc.is_connected()
@@ -183,10 +183,11 @@ class Controller(udi_interface.Node):
     def parameterHandler(self, params):
         self.removeNoticesAll()
         self.Parameters.load(params)
-        LOGGER.debug('Loading parameters now')
+        LOGGER.info('parmHandler: Loading parameters now')
         if self.checkParams():
             self.discover()
             self.parmDone = True
+        LOGGER.info('parmHandler Done...')
 
     """
     Called via the CUSTOMTYPEDPARAMS event. This event is sent When
@@ -201,13 +202,11 @@ class Controller(udi_interface.Node):
     def typedParameterHandler(self, params):
         self.TypedParameters.load(params)
         LOGGER.debug('Loading typed parameters now')
-        LOGGER.debug(params)
+        LOGGER.debug(f'typedParms: {params}')
 
     def checkParams(self):
         # pull in Parameters from Node Server Configuration page
         self.mqtt_server = self.Parameters["mqtt_server"] or 'localhost'
-        self.mqtt_port = int(self.Parameters["mqtt_port"] or 1884)
-        self.mqtt_ = int(self.Parameters["mqtt_port"] or 1884)
         self.mqtt_port = int(self.Parameters["mqtt_port"] or 1884)
         self.mqtt_user = self.Parameters["mqtt_user"] or 'admin'
         self.mqtt_password = self.Parameters["mqtt_password"] or 'admin'
@@ -224,12 +223,10 @@ class Controller(udi_interface.Node):
                 dev_yaml = yaml.safe_load(f.read())  # upload devfile into data
                 f.close()
             except Exception as ex:
-                LOGGER.error(
-                    "Failed to parse {} content: {}".format(self.Parameters["devfile"], ex))
+                LOGGER.error(f"checkParms: Failed to parse {self.Parameters['devfile']} content: {ex}")
                 return False
             if "devices" not in dev_yaml:
-                LOGGER.error(
-                    "Manual discovery file {} is missing bulbs section".format(self.Parameters["devfile"]))
+                LOGGER.error(f"checkParms: Manual discovery file {self.Parameters['devfile']} is missing bulbs section")
                 return False
             self.devlist = dev_yaml["devices"]  # transfer devfile into devlist
 
@@ -243,11 +240,10 @@ class Controller(udi_interface.Node):
                 LOGGER.error("Failed to parse the devlist: {}".format(ex))
                 return False
         else:
-            LOGGER.error("devlist must be configured")
+            LOGGER.error("checkParmes: NO devfile or devlist !!!! Must be configured!!")
             return False
 
         self.valid_configuration = True
-
         return True
 
     """
@@ -302,7 +298,6 @@ class Controller(udi_interface.Node):
         for node in nodes:
             nodes[node].reportDrivers()
 
-
     def updateProfile(self,command):
         LOGGER.info('update profile')
         st = self.poly.updateProfile()
@@ -324,7 +319,7 @@ class Controller(udi_interface.Node):
                     or "cmd_topic" not in dev
                     or "type" not in dev
             ):
-                LOGGER.error("Invalid device definition: {}".format(json.dumps(dev)))
+                LOGGER.error("Invalid device definition: {json.dumps(dev)}")
                 continue
             if "name" in dev:
                 name = dev["name"]
@@ -333,36 +328,36 @@ class Controller(udi_interface.Node):
             address = Controller._format_device_address(dev)
             if not self.poly.getNode(address):
                 if dev["type"] == "switch":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQSwitch(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
 
-                elif dev["type"] == "dimmer":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "dimmer":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQDimmer(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
                     dev['extra_status_topic'] = dev['status_topic'].rsplit('/', 1)[0] + '/RESULT'
                     LOGGER.info(f'Adding {dev["extra_status_topic"]}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
-                    LOGGER.info("ADDED {} {} /RESULT".format(dev["type"], name))
+                    LOGGER.info("ADDED {} {} /RESULT".format(dev['type'], name))
 
-                elif dev["type"] == "ifan":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "ifan":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQFan(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
 
-                elif dev["type"] == "sensor":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "sensor":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQSensor(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
 
-                elif dev["type"] == "flag":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "flag":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQFlag(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
 
-                elif dev["type"] == "TempHumid":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "TempHumid":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQdht(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
                     # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
@@ -371,8 +366,8 @@ class Controller(udi_interface.Node):
                     LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
 
-                elif dev["type"] == "Temp":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "Temp":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQds(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
                     # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
@@ -381,8 +376,8 @@ class Controller(udi_interface.Node):
                     LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
 
-                elif dev["type"] == "TempHumidPress":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "TempHumidPress":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQbme(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
                     # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
@@ -391,19 +386,19 @@ class Controller(udi_interface.Node):
                     LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
 
-                elif dev["type"] == "distance":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "distance":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQhcsr(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
 
-                elif dev["type"] == "shellyflood":
+                elif dev['type'] == "shellyflood":
                     LOGGER.info(f"Adding {dev['type']} {name}")
                     self.poly.addNode(MQShellyFlood(self.poly, self.address, address, name, dev))
                     status_topics = dev["status_topic"]
                     self._add_status_topics(dev, status_topics)
 
-                elif dev["type"] == "analog":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "analog":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQAnalog(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
                     # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
@@ -412,23 +407,23 @@ class Controller(udi_interface.Node):
                     LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
                     self._add_status_topics(dev, [dev['extra_status_topic']])
 
-                elif dev["type"] == "s31":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "s31":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQs31(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
 
-                elif dev["type"] == "raw":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "raw":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQraw(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
 
-                elif dev["type"] == "RGBW":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "RGBW":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQRGBWstrip(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
 
-                elif dev["type"] == "ratgdo":
-                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                elif dev['type'] == "ratgdo":
+                    LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQratgdo(self.poly, self.address, address, name, dev))
                     status_topics_base = dev["status_topic"] + "/status/"
                     status_topics = [status_topics_base + "availability",
@@ -440,7 +435,7 @@ class Controller(udi_interface.Node):
                     self._add_status_topics(dev, status_topics)
 
                 else:
-                    LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
+                    LOGGER.error("Device type {} is not yet supported".format(dev['type']))
                     continue
                 self.wait_for_node_done()
             nodes_new.append(address)
@@ -479,7 +474,7 @@ class Controller(udi_interface.Node):
             self.mqttc.disconnect()
         self.poly.stop()
 
-        LOGGER.info('MQTT stopped.')
+        LOGGER.info('MQTT stopped...')
 
     def heartbeat(self,init=False):
         """
@@ -488,10 +483,10 @@ class Controller(udi_interface.Node):
         the ISY.  Programs on the ISY can then monitor this and take action
         when the heartbeat fails to update.
         """
-        LOGGER.debug('heartbeat: init={}'.format(init))
+        LOGGER.debug(f'heartbeat: init={init}')
         if init is not False:
             self.hb = init
-        LOGGER.debug('heartbeat: hb={}'.format(self.hb))
+        LOGGER.debug(f'heartbeat: hb={self.hb}')
         if self.hb == 0:
             self.reportCmd("DON",2)
             self.hb = 1
@@ -541,12 +536,13 @@ class Controller(udi_interface.Node):
             return
         topic = message.topic
         payload = message.payload.decode("utf-8")
-        LOGGER.debug("Received _on_message {} from {}".format(payload, topic))
+        LOGGER.info(f"Received _on_message {payload} from {topic}")
         try:
             try:
                 data = json.loads(payload)
                 if 'StatusSNS' in data:
                     data = data['StatusSNS']
+                    LOGGER.info(f'_StatusSNS data: {data}')
                 if 'ANALOG' in data.keys():
                     LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
                     for sensor in data['ANALOG']:
@@ -563,10 +559,10 @@ class Controller(udi_interface.Node):
                     LOGGER.info(f'_OBM: {sensor}')
                     self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
                 else:  # if it's anything else, process as usual
-                    LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
+                    LOGGER.info(f'_else: Payload = {payload}, Topic = {topic}')
                     self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
             except json.decoder.JSONDecodeError or TypeError:  # if it's not a JSON, process as usual
-                LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
+                LOGGER.info(f"_NotJSON: Payload = {payload}, Topic = {topic}")
                 self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
@@ -576,20 +572,20 @@ class Controller(udi_interface.Node):
         return self.status_topics_to_devices.get(topic, None)
 
     def _get_device_address_from_sensor_id(self, topic, sensor_type):
-        LOGGER.debug(f'GDA1: {topic}  {sensor_type}')
-        LOGGER.debug(f'DLT: {self.devlist}')
+        LOGGER.debug(f'GDA1: topic: {topic}  sensor_type: {sensor_type}')
+        LOGGER.debug(f'GDA1b: devlist: {self.devlist}')
         self.node_id = None
         for device in self.devlist:
-            LOGGER.debug(f'GDA2: {device}')
+            LOGGER.debug(f'GDA2: device: {device}')
             if 'sensor_id' in device:
                 if topic.rsplit('/')[1] in device['status_topic'] and sensor_type in device['sensor_id']:
                     self.node_id = device['id'].lower().replace("_", "").replace("-", "_")[:14]
-                    LOGGER.debug(f'NODE_ID: {self.node_id}, {topic}, {sensor_type}')
+                    LOGGER.debug(f'GDA2b: NODE_ID: {self.node_id}, {topic}, {sensor_type}')
                     break
-        LOGGER.debug(f'NODE_ID2: {self.node_id}')
+        LOGGER.debug(f'GDA3: NODE_ID2: {self.node_id}')
         if self.node_id == None:
             self.node_id = self._dev_by_topic(topic)
-            LOGGER.debug(f'NODE_ID3: {self.node_id}')
+            LOGGER.debug(f'GDA4: revert to topic NODE_ID3: {self.node_id}')
         return self.node_id
 
     @staticmethod
@@ -597,6 +593,7 @@ class Controller(udi_interface.Node):
         return dev["id"].lower().replace("_", "").replace("-", "_")[:14]
 
     def mqtt_pub(self, topic, message):
+        LOGGER.debug(f"mqtt_pub: topic: {topic}, message: {message}")
         self.mqttc.publish(topic, message, retain=False)
 
     def mqtt_subscribe(self):

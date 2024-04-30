@@ -20,6 +20,7 @@ DONE raw to allow int
 DONE find topic by topic if no device_id find
 FIXME config.md fixes
 FIXME status for switch device available in programs
+STARTED internal: improve logging for debug
 
 Current TODO list from forum:
 
@@ -40,7 +41,7 @@ DONE: Parameters are not initially populated, plugin uses the following defaul
 STARTED: CONFIG.MD, changed references of power to POWER. (please feel free to suggest other improvements to the docs)
 HELP: S31 debug:  ****need some specifics here of what is happening, logs aways help
 HELP: iFan debug: ****need some specifics here of what is happening, logs aways help
-NEXT: internal: improve logging for debug
+STARTED: internal: improve logging for debug
 NEXT: make discover button also update Matt subscriptions
 
 Query is not consistent across the devices
