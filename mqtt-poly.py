@@ -11,9 +11,14 @@ import sys
 
 LOGGER = udi_interface.LOGGER
 
-VERSION = '0.0.39'
+VERSION = '0.40.0'
 
 """
+0.40.0
+DONE change numbering to allow for branch management
+DONE raw to allow int
+DONE find topic by topic if no device_id find
+
 0.0.39
 DEBUG discover bug fix
 

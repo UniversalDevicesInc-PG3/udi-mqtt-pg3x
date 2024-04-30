@@ -565,7 +565,7 @@ class Controller(udi_interface.Node):
                 else:  # if it's anything else, process as usual
                     LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
                     self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
-            except json.decoder.JSONDecodeError:  # if it's not a JSON, process as usual
+            except json.decoder.JSONDecodeError or TypeError:  # if it's not a JSON, process as usual
                 LOGGER.info('Payload = {}, Topic = {}'.format(payload, topic))
                 self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
@@ -587,6 +587,9 @@ class Controller(udi_interface.Node):
                     LOGGER.debug(f'NODE_ID: {self.node_id}, {topic}, {sensor_type}')
                     break
         LOGGER.debug(f'NODE_ID2: {self.node_id}')
+        if self.node_id == None:
+            self.node_id = self._dev_by_topic(topic)
+            LOGGER.debug(f'NODE_ID3: {self.node_id}')
         return self.node_id
 
     @staticmethod

@@ -53,6 +53,8 @@ class MQds(udi_interface.Node):
         LOGGER.debug(f'YYY {self.sensor_id}, {data} ')
         if 'StatusSNS' in data:
             data = data['StatusSNS']
+        if 'DS18B20' in data:
+            data = data['DS18B20']
         if self.sensor_id in data:
             self.setDriver("ST", 1)
             self.setDriver("CLITEMP", data[self.sensor_id]["Temperature"])
