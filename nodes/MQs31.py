@@ -59,11 +59,11 @@ class MQs31(udi_interface.Node):
         
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "CC", "value": 0, "uom": 1},
+        {"driver": "CC", "value": 0.00, "uom": 1},
         {"driver": "CPW", "value": 0, "uom": 73},
         {"driver": "CV", "value": 0, "uom": 72},
-        {"driver": "PF", "value": 0, "uom": 53},
-        {"driver": "TPW", "value": 0, "uom": 33},
+        {"driver": "PF", "value": 0.00, "uom": 53},
+        {"driver": "TPW", "value": 0.00, "uom": 33},
     ]
 
     """
