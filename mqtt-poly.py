@@ -29,32 +29,33 @@ I will update this post as ideas make the list and are prioritized.
 
 *** Putting up into Beta under MQTT-poly for the brave to try out and give feedback.
 
-DONE: Changed versioning so git branches and hot fixes can work.
-        so 0.40.0 means it will be on branch 0.40 with the last .0
-        reserved for hotfixes.  These will then be pushed by PG3 to users
-DONE: Switch make Status available in IF for programs
-DONE: Parameters are not initially populated, plugin uses the following defaults:
-        mqtt_server = LocalHost
-        mqtt_port = 1884
-        mutt-user = admin (same as None)
-        mqtt_password = admin (same as None)
-DONE: 'raw' fix docs and allow to take int type in addition to str
-STARTED: CONFIG.MD, changed references of power to POWER. (please feel free to suggest other improvements to the docs)
-HELP: S31 debug:  ****need some specifics here of what is happening, logs aways help
-HELP: iFan debug: ****need some specifics here of what is happening, logs aways help
-STARTED: internal: improve logging for debug
-NEXT: make discover button also update Matt subscriptions
+DONE:   Changed versioning so git branches and hot fixes can work.
+          so 0.40.0 means it will be on branch 0.40 with the last .0
+          reserved for hotfixes.  These will then be pushed by PG3 to users
+DONE:   Switch make Status available in IF for programs
+DONE:   Parameters are not initially populated, plugin uses the following defaults:
+           mqtt_server = LocalHost
+           mqtt_port = 1884
+           mutt-user = admin (same as None)
+           mqtt_password = admin (same as None)
+DONE:   'raw' fix docs and allow to take int type in addition to str
 
-Query is not consistent across the devices
+STARTED:CONFIG.MD, changed references of power to POWER. (please feel free to suggest other improvements to the docs)
+STARTED:internal: improve logging for debug
 
-Tasmota potential automation opportunities in discovery
+NEXT:   make discover button also update MQTT subscriptions
+NEXT:   Query is not consistent across the devices
 
-Multiple-Analog clean-up
+HELP:   S31 debug:  ****need some specifics here of what is happening, logs aways help
+HELP:   iFan debug: ****need some specifics here of what is happening, logs aways help
+HELP:   Tasmota potential automation opportunities in discovery
+HELP:   Multiple-Analog clean-up (particular issues?)
+HELP:    Google Assistant is not reporting device status consistently: it shows correctly for a few seconds and then goes to 'OFF' (All / some devices?)
 
-simplify devlist/devfile by using 'defaults' for status_topic and cmd_topic. (They are mostly a combination of 'id' and a set of repetitive strings). This could reduce configuration pain by 80% and typos by 90%. Minimum need: 'id:' and 'type:' optional 'name:'
+LATER:  simplify devlist/devfile by using 'defaults' for status_topic and cmd_topic. (They are mostly a combination of 'id' and a set of repetitive strings). This could reduce configuration pain by 80% and typos by 90%. Minimum need: 'id:' and 'type:' optional 'name:'
 
-Google Assistant is not reporting device status consistently: it shows correctly for a few seconds and then goes to 'OFF'
 
+Previous versions:
 
 0.0.39
 DEBUG discover bug fix
