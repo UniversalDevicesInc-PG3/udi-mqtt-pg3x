@@ -567,7 +567,7 @@ class Controller(udi_interface.Node):
                 else:  # if it's anything else, process as usual
                     LOGGER.info(f'_else: Payload = {payload}, Topic = {topic}')
                     self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
-            except json.decoder.JSONDecodeError or TypeError:  # if it's not a JSON, process as usual
+            except (json.decoder.JSONDecodeError, TypeError):  # if it's not a JSON, process as usual
                 LOGGER.info(f"_NotJSON: Payload = {payload}, Topic = {topic}")
                 self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
