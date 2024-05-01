@@ -16,7 +16,7 @@ VERSION = '0.40.0'
 """
 0.40.0
 DONE change numbering to allow for branch management
-DONE raw to allow int
+DONE raw fix docs & allow int in addition to str
 DONE find topic by topic if no device_id find
 FIXME config.md fixes
 FIXME status for switch device available in programs
@@ -38,6 +38,7 @@ DONE: Parameters are not initially populated, plugin uses the following defaul
         mqtt_port = 1884
         mutt-user = admin (same as None)
         mqtt_password = admin (same as None)
+DONE: 'raw' fix docs and allow to take int type in addition to str
 STARTED: CONFIG.MD, changed references of power to POWER. (please feel free to suggest other improvements to the docs)
 HELP: S31 debug:  ****need some specifics here of what is happening, logs aways help
 HELP: iFan debug: ****need some specifics here of what is happening, logs aways help

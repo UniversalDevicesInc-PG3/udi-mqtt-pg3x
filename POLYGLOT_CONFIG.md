@@ -59,6 +59,7 @@ One of the following:
 use *switch* as a separate device for light control
 - *shellyflood* - [Shelly Flood sensor][Flood]; supports monitoring of  
 temperature, water leak detection (`flood`), battery level, and errors.
+- *raw* - simple str, int
 - *dimmer* - Smart Wi-Fi Light Dimmer Switch, [**See Amazon**][dimmer]  
 Important, use  
 cmd_topic: cmnd/topic/dimmer  
