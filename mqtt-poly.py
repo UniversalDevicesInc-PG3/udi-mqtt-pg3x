@@ -18,6 +18,7 @@ VERSION = '0.40.0'
 DONE change numbering to allow for branch management
 DONE raw fix docs & allow int in addition to str
 DONE find topic by topic if no device_id find
+DONE:discover button updates nodes and MQTT subscriptions
 FIXME config.md fixes
 FIXME status for switch device available in programs
 STARTED internal: improve logging for debug
@@ -39,11 +40,11 @@ DONE:   Parameters are not initially populated, plugin uses the following defa
            mutt-user = admin (same as None)
            mqtt_password = admin (same as None)
 DONE:   'raw' fix docs and allow to take int type in addition to str
+DONE:discover button updates nodes and MQTT subscriptions
 
 STARTED:CONFIG.MD, changed references of power to POWER. (please feel free to suggest other improvements to the docs)
 STARTED:internal: improve logging for debug
 
-NEXT:   make discover button also update MQTT subscriptions
 NEXT:   Query is not consistent across the devices
 
 HELP:   S31 debug:  ****need some specifics here of what is happening, logs aways help

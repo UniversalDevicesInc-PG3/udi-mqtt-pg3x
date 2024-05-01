@@ -185,7 +185,7 @@ class Controller(udi_interface.Node):
         self.Parameters.load(params)
         LOGGER.info('parmHandler: Loading parameters now')
         if self.checkParams():
-            self.discover()
+            self.discover_nodes()
             self.parmDone = True
         LOGGER.info('parmHandler Done...')
 
@@ -309,6 +309,12 @@ class Controller(udi_interface.Node):
         and from DISCOVER command received from ISY
         parse out the devices contained in devlist.
         """
+        self.discover_nodes()
+        connected = self.mqttc.is_connected()
+        if connected == True:
+            self.mqtt_subscribe()
+   
+    def discover_nodes(self, command = None):
         LOGGER.info(f"discovery start")
         self.discovery = True
         nodes_new = []
