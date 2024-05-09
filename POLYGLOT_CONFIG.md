@@ -15,25 +15,77 @@ You will need a MQTT broker running (can be on RPi running Polyglot)
 ### Custom Parameters
 
 You will need to define the following custom parameters:  
-mqtt server, port, user, & password are only required if using an external mqtt server you set up
+mqtt server, port, user, & password are only required if using an external  
+mqtt server you set up
 
-#### `mqtt_server`  - (default = 'localhost') :not required if using MQTT on EISY/Polisy
+```json
+# ONlY REQUIRED IF EXTERNAL SERVER OR YOU CHANGED LOCAL SETTINGS
+mqtt_server   - (default = 'localhost')
 
-#### `mqtt_port` -  (default = 1884) :do not change if using MQTT on EISY/Polisy
+mqtt_port     -  (default = 1884)
 
-#### `mqtt_user` - (default = admin) :not required if using MQTT on EISY/Polisy
+mqtt_user     - (default = admin)
 
-#### `mqtt_password` - (default = admin) :not required if using MQTT on EISY/Polisy
+mqtt_password - (default = admin)
 
-#### `devfile` - yaml file of devices, status & command topics
+# ONE OF BELOW IS REQURED (see below for example of each)
+devfile - name of yaml file stored on EISY
+or
+devlist - JSON array, note format & space between '[' and '{'
+```
 
-PREFERRED METHOD and alternative to `devlist` option below  
-Use the yaml file instead, start with `devices:` and then same syntax
+#### `devlist example` - JSON list of devices & status/command topics
 
-#### `devlist` - JSON list of devices, status & command topics
+```json
+[  {"id": "sonoff1", "type": "switch", 
+        "status_topic":  "stat/sonoff1/POWER", 
+        "cmd_topic":  "cmnd/sonoff1/power"},  
+    {"id":  "sonoff2",  "type":  "switch", 
+        "status_topic":  "stat/sonoff2/POWER",  
+        "cmd_topic":  "cmnd/sonoff2/power"}  ]
+```
 
-for example:  
-`[  {"id":  "sonoff1",  "type":  "switch",  "status_topic":  "stat/sonoff1/POWER", "cmd_topic":  "cmnd/sonoff1/power"},  {"id":  "sonoff2",  "type":  "switch", "status_topic":  "stat/sonoff2/POWER",  "cmd_topic":  "cmnd/sonoff2/power"}  ]`
+#### `devfile example` - YAML file stored on EISY of devices & topics
+
+```yaml
+devices:
+
+- id: "WemosA1"
+  name: "Wemos A1"
+  type: "analog"
+  sensor_id: "A1"
+  status_topic: "tele/Wemos32/SENSOR"
+  cmd_topic: "cmnd/Wemos32/POWER"
+- id: "WemosR2"
+  name: "Wemos AR"
+  type: "analog"
+  sensor_id: "Range2"
+  status_topic: "tele/Wemos32/SENSOR"
+  cmd_topic: "cmnd/Wemos32/POWER"
+- id: "WemosT1"
+  name: "Wemos T1"
+  type: "Temp"
+  sensor_id: "DS18B20-1"
+  status_topic: "tele/Wemos32/SENSOR"
+  cmd_topic: "cmnd/Wemos32/POWER"
+- id: "WemosT2"
+  name: "Wemos T2"
+  type: "Temp"
+  sensor_id: "DS18B20-2"
+  status_topic: "tele/Wemos32/SENSOR"
+  cmd_topic: "cmnd/Wemos32/POWER"
+- id: "WemosTH"
+  name: "Wemos TH"
+  type: "TempHumid"
+  sensor_id: "AM2301"
+  status_topic: "tele/Wemos32/SENSOR"
+  cmd_topic: "cmnd/Wemos32/POWER"
+- id: "WemosSW"
+  name: "Wemos SW"
+  type: "switch"
+  status_topic: "stat/Wemos32/POWER"
+  cmd_topic: "cmnd/Wemos32/POWER"
+```
 
 ##### `"id":`
 
@@ -72,61 +124,31 @@ see [**ratgdo site**](https://paulwieland.github.io/ratgdo/)
 
 - For switch this will be the cmnd topic (like `cmnd/sonoff1/POWER`),  
 but on sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`).  
-For Shelly Floods, this will be an array, like  
-`[ "shellies/shellyflood-<unique-id>/sensor/temperature", "shellies/shellyflood-<unique-id>/sensor/flood" ]`  
+For Shelly Floods, this will be an array, like:
+
+```json
+[ "shellies/shellyflood-<unique-id>/sensor/temperature", 
+   "shellies/shellyflood-<unique-id>/sensor/flood" ]  
+```
+
 (they usually also have a `battery` and `error` topic that follow the same pattern).
 
 ##### `"cmd_topic":`
 
 - Is always required, even if the type doesn't support it (like a sensor)  
 Just enter a generic topic (`cmnd/sensor/POWER`).  
-  - if you are using ANALOG, TEMP or TEMPHUMID 'types', you need to add  
-    a <'sensor_id': 'sensor name'> object to the configuration of the device  
+  - if you are using ANALOG, TEMP or TEMPHUMID 'types', you need to add a
+  
+  ```json
+      'sensor_id': 'sensor name'
+  ```
+  
+    object to the configuration of the device  
   - the 'sensor name' can be found by examining an mqtt message in the Web  
   console of the Tasmota device
 
-##### a devfile for those sensors
-
-devices:
-
-- id: "WemosA1"
-  name: "Wemos A1"
-  type: "analog"
-  sensor_id: "A1"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/POWER"
-- id: "WemosR2"
-  name: "Wemos AR"
-  type: "analog"
-  sensor_id: "Range2"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/POWER"
-- id: "WemosT1"
-  name: "Wemos T1"
-  type: "Temp"
-  sensor_id: "DS18B20-1"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/POWER"
-- id: "WemosT2"
-  name: "Wemos T2"
-  type: "Temp"
-  sensor_id: "DS18B20-2"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/POWER"
-- id: "WemosTH"
-  name: "Wemos TH"
-  type: "TempHumid"
-  sensor_id: "AM2301"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/POWER"
-- id: "WemosSW"
-  name: "Wemos SW"
-  type: "switch"
-  status_topic: "stat/Wemos32/POWER"
-  cmd_topic: "cmnd/Wemos32/POWER"
-
-- ** Note the topic (Wemos32) is the same for all sensors on the same device \
-The 'id' and 'name' can be different
+  - Note the topic (Wemos32) is the same for all sensors on the same device  
+    The 'id' and 'name' can be different
 
 [license]: https://img.shields.io/github/license/mashape/apistatus.svg
 [localLicense]: https://github.com/Trilife/udi-mqtt-pg3x/blob/main/LICENSE
