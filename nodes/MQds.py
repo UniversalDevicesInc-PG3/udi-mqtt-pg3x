@@ -56,6 +56,9 @@ class MQds(udi_interface.Node):
         if self.sensor_id in data:
             self.setDriver("ST", 1)
             self.setDriver("CLITEMP", data[self.sensor_id]["Temperature"])
+        elif 'DS18B20' in data:
+            self.setDriver("ST", 1)
+            self.setDriver("CLITEMP", data['DS18B20']["Temperature"])
         else:
             self.setDriver("ST", 0)
             self.setDriver("GPV", 0)
