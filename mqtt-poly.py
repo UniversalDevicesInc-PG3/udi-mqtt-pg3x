@@ -11,14 +11,21 @@ import sys
 
 LOGGER = udi_interface.LOGGER
 
-VERSION = '0.40.2'
+VERSION = '0.40.3'
 
 """
+0.40.3
+DONE: fixed typos in POLYGLOT_CONFIG.md
+STARTED: Organize device types according to Tasmota, Sensor etc.
+TODO: Reorganize sample devfile for clarity and comments
+ 
 0.40.2
 DONE README.md clean-up
 DONE POLYGLOT_CONFIG.md clean-up
+
 0.40.1
 DONE s31 displays in program
+
 0.40.0
 DONE change numbering to allow for branch management
 DONE raw fix docs & allow int in addition to str
