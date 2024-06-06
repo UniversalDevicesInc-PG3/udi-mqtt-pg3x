@@ -2,38 +2,33 @@
 
 [![license][license]][localLicense]
 
-This Poly provides an interface between MQTT broker and the [Polyglot PG3][poly] server.
+This Plugin provides an interface between an MQTT broker and the [Polyglot PG3][poly] server.
 
 [This thread][forum] on UDI forums has more details, ask questions there.
 
 ## MQTT Broker
 If you are on PG3 or PG3X on eISY the broker is already running by default 
  
-IF you are on Polisy or running Polyglot on an RPi, see post #1 in [this thread][sonoff] on how to setup.
+If you are on Polisy or running Polyglot on an RPi, see post #1 in [this thread][sonoff] on how to set up.
 
 ### Custom Parameters
 
-You will need to define the following custom parameters:  
-mqtt server, port, user, & password are only required if using an external  
-mqtt server you set up
+You will need to define the following custom parameters:
 
 ```json
-# ONLY REQUIRED IF EXTERNAL SERVER OR YOU CHANGED LOCAL SETTINGS
-mqtt_server   - (default = 'localhost')
-
-mqtt_port     -  (default = 1884)
-
-mqtt_user     - (default = admin)
-
-mqtt_password - (default = admin)
-
-# ONE OF BELOW IS REQUIRED (see below for example of each)
+# ONE OF THE BELOW IS REQUIRED (see below for example of each)
 devfile - name of yaml file stored on EISY
-or
+    or
 devlist - JSON array, note format & space between '[' and '{'
+
+# THESE ARE REQUIRED ONLY IF USING AN EXTERNAL SERVER OR YOU CHANGED LOCAL SETTINGS
+mqtt_server   - (default = 'localhost')
+mqtt_port     - (default = 1884)
+mqtt_user     - (default = admin)
+mqtt_password - (default = admin)
 ```
 
-#### `devlist example` - JSON list of devices & status/command topics
+#### `devlist example` - JSON list of devices & status/command topics note format & space between '[' and '{'
 
 ```json
 [  {"id": "sonoff1", "type": "switch", 
@@ -97,7 +92,7 @@ characters only and underline, no special characters, **maximum 14 characters**
 
 One of the following:
 
-Tasmota flashed Devices: 
+Tasmota-flashed Devices: 
 - *switch* - For basic sonoff or generic switch.
 - *analog* - General purpose Analog input using onboard ADC. * see details below
 - *s31* - This is for the [Sonoff S31][s31] energy monitoring (use switch type for control)

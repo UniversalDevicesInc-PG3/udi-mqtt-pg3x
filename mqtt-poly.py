@@ -8,6 +8,12 @@ It is an interface between HunterDouglas Shades and Polyglot for EISY/Polisy
 """
 import udi_interface
 import sys
+#==============this code added==================================================================:
+#import pydevd_pycharm
+
+#pydevd_pycharm.settrace('192.168.10.190', port=3000, stdoutToServer=True, stderrToServer=True)
+#================================================================================================
+
 
 LOGGER = udi_interface.LOGGER
 
@@ -60,7 +66,7 @@ STARTED:CONFIG.MD, changed references of power to POWER. (please feel free to su
 At the end of the config file, I had put a sample on the syntax of a devfile for multiple analog inputs. Unfortunately, 'MD' reformatted it and it looks completely different from the yaml sample. It might be useful to add a standard 'switch' sample in that device.yaml and somehow make it look like the sample I sent you some time ago (and also shared with Maxnorth on the forum, I think) 
 
 NEXT:   Query is not consistent across the devices
-HELP:   iFan debug: ****need some specifics here of what is happening, logs aways help
+HELP:   iFan debug: ****need some specifics here of what is happening, logs always help
 HELP:    Google Assistant is not reporting device status consistently: 
 
 I only access MQSwitch and MQDimmer with Google Assistant (Voice): when initially called on a hub or hub max, the screen shows the status as ON (and % for dimmer). And after a couple of seconds it reverts to OFF and 0%.
@@ -128,7 +134,7 @@ if __name__ == "__main__":
         """
         polyglot.stop()
     except Exception as err:
-        LOGGER.error('Excption: {0}'.format(err), exc_info=True)
+        LOGGER.error('Exception: {0}'.format(err), exc_info=True)
     sys.exit(0)
 
 
