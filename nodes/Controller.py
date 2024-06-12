@@ -103,7 +103,7 @@ class Controller(udi_interface.Node):
 
         # Tell the interface we exist.  
         self.poly.addNode(self)
-        
+
         '''
         node_queue() and wait_for_node_event() create a simple way to wait
         for a node to be created.  The nodeAdd() API call is asynchronous and
@@ -122,7 +122,7 @@ class Controller(udi_interface.Node):
         self.Notices['hello'] = 'Start-up'
 
         self.last = 0.0
-        # Send the profile files to the ISY if neccessary. The profile version
+        # Send the profile files to the ISY if necessary. The profile version
         # number will be checked and compared. If it has changed since the last
         # start, the new files will be sent.
         self.poly.updateProfile()
@@ -142,12 +142,12 @@ class Controller(udi_interface.Node):
             time.sleep(5)
 
         # get user mqtt server connection going
-        self.mqttc = mqtt.Client()
+        self.mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
         self.mqttc.on_connect = self._on_connect
         self.mqttc.on_disconnect = self._on_disconnect
         self.mqttc.on_message = self._on_message
         self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
-        while self.parmDone !=True:
+        while not self.parmDone:
             LOGGER.info("Start: Waiting on first Discovery Completion")
             time.sleep(1)
         try:
@@ -158,7 +158,7 @@ class Controller(udi_interface.Node):
             self.Notices['mqtt'] = 'Error on user MQTT connection'
 
         connected = self.mqttc.is_connected()
-        while connected != True:
+        while not connected:
             LOGGER.error('Start: Waiting on user MQTT connection')
             self.Notices['mqtt'] = 'Waiting on user MQTT connection'
             time.sleep(3)
@@ -177,7 +177,7 @@ class Controller(udi_interface.Node):
     New or changed parameters are marked so that you may trigger
     other actions when the user changes or adds a parameter.
 
-    NOTE: Be carefull to not change parameters here. Changing
+    NOTE: Be careful to not change parameters here. Changing
     parameters will result in a new event, causing an infinite loop.
     """
     def parameterHandler(self, params):
@@ -223,10 +223,10 @@ class Controller(udi_interface.Node):
                 dev_yaml = yaml.safe_load(f.read())  # upload devfile into data
                 f.close()
             except Exception as ex:
-                LOGGER.error(f"checkParms: Failed to parse {self.Parameters['devfile']} content: {ex}")
+                LOGGER.error(f"checkParams: Failed to parse {self.Parameters['devfile']} content: {ex}")
                 return False
             if "devices" not in dev_yaml:
-                LOGGER.error(f"checkParms: Manual discovery file {self.Parameters['devfile']} is missing bulbs section")
+                LOGGER.error(f"checkParams: Manual discovery file {self.Parameters['devfile']} is missing bulbs section")
                 return False
             self.devlist = dev_yaml["devices"]  # transfer devfile into devlist
 
@@ -240,7 +240,7 @@ class Controller(udi_interface.Node):
                 LOGGER.error("Failed to parse the devlist: {}".format(ex))
                 return False
         else:
-            LOGGER.error("checkParmes: NO devfile or devlist !!!! Must be configured!!")
+            LOGGER.error("checkParams: NO devfile or devlist !!!! Must be configured!!")
             return False
 
         self.valid_configuration = True
@@ -311,9 +311,9 @@ class Controller(udi_interface.Node):
         """
         self.discover_nodes()
         connected = self.mqttc.is_connected()
-        if connected == True:
+        if connected:
             self.mqtt_subscribe()
-   
+
     def discover_nodes(self, command = None):
         LOGGER.info(f"discovery start")
         self.discovery = True
@@ -459,7 +459,7 @@ class Controller(udi_interface.Node):
         self.discovery = False
         LOGGER.info(f"Done Discovery")
         return True
-                    
+
     def delete(self):
         """
         This is called by Polyglot upon deletion of the NodeServer. If the

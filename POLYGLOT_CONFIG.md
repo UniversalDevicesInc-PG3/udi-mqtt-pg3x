@@ -1,4 +1,4 @@
-# MQTT Nodeserver for Devices
+# MQTT Plug-In for Devices
 
 [![license][license]][localLicense]
 
@@ -15,19 +15,19 @@ If you are on Polisy or running Polyglot on an RPi, see post #1 in [this thread]
 
 You will need to define the following custom parameters:
 
-```json
-# ONE OF THE BELOW IS REQUIRED (see below for example of each)
-devfile - name of yaml file stored on EISY
-    or
+```
+## ONE OF THE BELOW IS REQUIRED (see below for example of each)
 devlist - JSON array, note format & space between '[' and '{'
+    or
+devfile - name of yaml file stored on EISY
 
-# THESE ARE REQUIRED ONLY IF USING AN EXTERNAL SERVER OR YOU CHANGED LOCAL SETTINGS
+## THESE ARE REQUIRED ONLY IF USING AN EXTERNAL SERVER OR YOU CHANGED LOCAL SETTINGS
 mqtt_server   - (default = 'localhost')
 mqtt_port     - (default = 1884)
 mqtt_user     - (default = admin)
 mqtt_password - (default = admin)
 ```
-
+#
 #### `devlist example` - JSON list of devices & status/command topics note format & space between '[' and '{'
 
 ```json
@@ -38,12 +38,11 @@ mqtt_password - (default = admin)
         "status_topic":  "stat/sonoff2/POWER",  
         "cmd_topic":  "cmnd/sonoff2/power"}  ]
 ```
-
+#
 #### `devfile example` - YAML file stored on EISY of devices & topics
 
 ```yaml
 devices:
-
 - id: "WemosA1"
   name: "Wemos A1"
   type: "analog"
@@ -80,70 +79,63 @@ devices:
   status_topic: "stat/Wemos32/POWER"
   cmd_topic: "cmnd/Wemos32/power"
 ```
-  - Note the topic (Wemos32) is the same for all sensors on the same device  
-    The 'id' and 'name' can be different
+Note the topic (Wemos32) is the same for all sensors on the same device. The 'id' and 'name' can be different
 
-##### `"id":`
+### `"id":`
 
 ISY node ID - Can be anything you like, but ISY restricts to alphanumeric  
 characters only and underline, no special characters, **maximum 14 characters**
 
-##### `"type":`
+### `"type":`
 
-One of the following:
+A device-type needs to be defined for by using of the following:
 
-Tasmota-flashed Devices: 
-- *switch* - For basic sonoff or generic switch.
-- *analog* - General purpose Analog input using onboard ADC. * see details below
-- *s31* - This is for the [Sonoff S31][s31] energy monitoring (use switch type for control)
-- *TempHumid* - For AM2301, AM2302, AM2321, DHT21, DHT22 sensors. * see details below
-- *Temp* - For DS18B20 sensors. * see details below
-- *TempHumidPress* - Supports the BME280 sensors.
-- *ifan* - Sonoff [iFan] module - motor control, use *switch* as a separate device for light control
-- *distance* - Supports HC-SR04 Ultrasonic Sensor.
-- *dimmer* - Smart Wi-Fi Light Dimmer Switch, [**See Amazon**][dimmer]  
-Important, use  
-cmd_topic: cmnd/topic/dimmer  
-status_topic: stat/topic/DIMMER (not .../power and ../POWER)
-- *RGBW* - Control for a micro-controlled [RGBW strip]
-- *sensor* - For nodemcu multi-sensor (see link in thread).
-- *flag* - For your device to send a condition to ISY {OK,NOK,LO,HI,ERR,IN,OUT,UP,DOWN,TRIGGER,ON,OFF,---}
+<u>Tasmota-flashed CONTROL Devices:</u> 
+- **switch** - For basic sonoff or generic switch.
+- **dimmer** - Smart Wi-Fi Light Dimmer Switch, [**See Amazon**][dimmer]. Use:
+```
+cmd_topic: "cmnd/topic/dimmer"
+status_topic: "stat/topic/DIMMER"
+```
+(not .../power and ../POWER)
+- **flag** - For your device to send a condition to ISY {OK,NOK,LO,HI,ERR,IN,OUT,UP,DOWN,TRIGGER,ON,OFF,---}
+- **ifan** - [**Sonoff iFan**][ifan] module - motor control, use **switch** as a separate device for light control
+- **s31** - This is for the [**Sonoff S31**][s31] energy monitoring (use switch type for control)
 
-- *shellyflood* - [Shelly Flood sensor][Flood]; supports monitoring of  
-temperature, water leak detection (`flood`), battery level, and errors. Uses Shelly's MQTT mode, not Tasmota.
-- *raw* - simple str, int
+<u>Tasmota-flashed SENSOR Devices:</u>
 
-- *ratgdo* - adds garage device based on the ratgdo board.  
-use topic_prefix/device name for both status & command topics  
-see [**ratgdo site**](https://paulwieland.github.io/ratgdo/)
+If you are using 'types' in this section, you need to add this object to the configuration of the device:
+  ```sensor_id: "sensor name"```
+The 'sensor name' can be found by examining an MQTT message in the Web console of the Tasmota device
 
-##### `"status_topic":`
+- **analog** - General purpose Analog input using onboard ADC.
+- **distance** - Supports HC-SR04 Ultrasonic Sensor. (Todo: Needs tweaking to work with multiple sensors)
+- **TempHumid** - For AM2301, AM2302, AM2321, DHT21, DHT22 sensors.
+- **Temp** - For DS18B20 sensors.
+- **TempHumidPress** - Supports the BME280 sensors.
 
-- For switch this will be the cmnd topic (like `cmnd/sonoff1/POWER`),  
-but on sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`).  
-For Shelly Floods, this will be an array, like:
+<u>Non-Tasmota Devices:</u>
+- **RGBW** - Control for a micro-controlled [**RGBW Strip**][RGBW strip]
+- **sensor** - For nodemcu multi-sensor (see link in thread)
+- **shellyflood** - [**Shelly Flood sensor**][Flood]; supports monitoring of temperature, water leak detection (`flood`), battery level, and errors. Uses Shelly's MQTT mode, not Tasmota.
+- **raw** - simple str, int
+- **ratgdo** - adds garage device based on the ratgdo board; use topic_prefix/device name for both status & command topics. See [**ratgdo site**](https://paulwieland.github.io/ratgdo/)
 
+### `"status_topic":`
+
+- For switch this will be the cmnd topic (like `cmnd/sonoff1/POWER`), 
+- For sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`).  
+- For Shelly Floods, this will be an array, like:
 ```json
 [ "shellies/shellyflood-<unique-id>/sensor/temperature", 
    "shellies/shellyflood-<unique-id>/sensor/flood" ]  
 ```
-
 (they usually also have a `battery` and `error` topic that follow the same pattern).
 
-##### `"cmd_topic":`
+### `"cmd_topic":`
 
 - Is always required, even if the type doesn't support it (like a sensor)  
 Just enter a generic topic (`cmnd/sensor/power`).  
-##### `* Notes on Analog`
-  - if you are using ANALOG, TEMP or TEMPHUMID 'types', you need to add this object to the configuration of the device: 
-  ```json
-      sensor_id: "sensor name"
-  ```
- 
-  - the 'sensor name' can be found by examining an mqtt message in the Web  
-  console of the Tasmota device
-
-
 
 [license]: https://img.shields.io/github/license/mashape/apistatus.svg
 [localLicense]: https://github.com/Trilife/udi-mqtt-pg3x/blob/main/LICENSE

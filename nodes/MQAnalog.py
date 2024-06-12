@@ -13,13 +13,15 @@ import json
 
 LOGGER = udi_interface.LOGGER
 
+
 class MQAnalog(udi_interface.Node):
     id = 'mqanal'
-    
+
     """
     This is the class that all the Nodes will be represented by. You will
     add this to Polyglot/ISY with the interface.addNode method.
     """
+
     def __init__(self, polyglot, primary, address, name, device):
         """
         Super runs all the parent class necessities.
@@ -63,7 +65,6 @@ class MQAnalog(udi_interface.Node):
             self.setDriver("ST", 0)
             self.setDriver("GPV", 0)
 
-
     def query(self, command=None):
         """
         Called by ISY to report all drivers for this node. This is done in
@@ -75,7 +76,7 @@ class MQAnalog(udi_interface.Node):
         LOGGER.debug(f'QT: {query_topic}')
         self.controller.mqtt_pub(query_topic, " 10")
         self.reportDrivers()
-        
+
     # all the drivers - for reference
     # GPV = "General Purpose Value"
     # UOM:56 = "The raw value reported by device"
@@ -91,4 +92,3 @@ class MQAnalog(udi_interface.Node):
     commands = {
         "QUERY": query,
     }
-

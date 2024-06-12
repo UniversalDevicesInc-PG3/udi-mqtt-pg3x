@@ -10,9 +10,10 @@ import udi_interface
 
 LOGGER = udi_interface.LOGGER
 
+
 class MQSwitch(udi_interface.Node):
     id = 'MQSW'
-    
+
     """
     This is the class that all the Nodes will be represented by. You will
     add this to Polyglot/ISY with the interface.addNode method.
@@ -34,6 +35,7 @@ class MQSwitch(udi_interface.Node):
     query(): Called when ISY sends a query request to Polyglot for this
         specific node
     """
+
     def __init__(self, polyglot, primary, address, name, device):
         """
         Optional.
@@ -73,15 +75,14 @@ class MQSwitch(udi_interface.Node):
         self.controller.mqtt_pub(self.cmd_topic, "OFF")
 
     def query(self, command=None):
-            """
+        """
             Called by ISY to report all drivers for this node. This is done in
             the parent class, so you don't need to override this method unless
             there is a need.
             """
-            self.controller.mqtt_pub(self.cmd_topic, "")
-            self.reportDrivers()
+        self.controller.mqtt_pub(self.cmd_topic, "")
+        self.reportDrivers()
 
-        
     # all the drivers - for reference
     drivers = [
         {"driver": "ST", "value": 0, "uom": 78, "name": "Power"}
@@ -97,4 +98,3 @@ class MQSwitch(udi_interface.Node):
         "DOF": cmd_off}
 
     hint = [4, 2, 0, 0]
-

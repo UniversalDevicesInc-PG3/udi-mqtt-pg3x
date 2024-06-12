@@ -11,9 +11,8 @@ import sys
 #==============this code added==================================================================:
 #import pydevd_pycharm
 
-#pydevd_pycharm.settrace('192.168.10.190', port=3000, stdoutToServer=True, stderrToServer=True)
+#pydevd_pycharm.settrace('192.168.10.190', port=10000, stdoutToServer=True, stderrToServer=True)
 #================================================================================================
-
 
 LOGGER = udi_interface.LOGGER
 
