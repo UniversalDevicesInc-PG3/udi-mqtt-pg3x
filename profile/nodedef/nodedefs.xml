@@ -2,7 +2,7 @@
     <nodeDef id="mqctrl" nls="CTRL">
         <editors />
         <sts>
-            <st id="ST" editor="BOOL" />
+            <st id="ST" editor="CTD" />
         </sts>
         <cmds>
           <sends>

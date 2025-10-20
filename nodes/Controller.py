@@ -1,52 +1,50 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025 Stephen Jenkins
 
-controller mqctrl
+Controller class
 """
 
-import udi_interface
-
+# std libraries
+import json, yaml, time, logging
+from threading import Event, Condition
 from typing import Dict, List
+
+# external libraries
+from udi_interface import Node, LOGGER, Custom, LOG_HANDLER
 import paho.mqtt.client as mqtt
-import json
-import yaml
-import time
+
+# personal libraries
+pass
 
 # Nodes
-from nodes import MQSwitch
-from nodes import MQDimmer
-from nodes import MQFan
-from nodes import MQSensor
-from nodes import MQFlag
-from nodes import MQdht
-from nodes import MQds
-from nodes import MQbme
-from nodes import MQhcsr
-from nodes import MQShellyFlood
-from nodes import MQAnalog
-from nodes import MQs31
-from nodes import MQraw
-from nodes import MQRGBWstrip
-from nodes import MQratgdo
+from nodes import *
 
-"""
-Some shortcuts for udi interface components
+ # Map device types to their respective node classes
+DEVICE_TYPE_TO_NODE_CLASS = {
+    'switch': MQSwitch,
+    'dimmer': MQDimmer,
+    'ifan': MQFan,
+    'sensor': MQSensor,
+    'flag': MQFlag,
+    'TempHumid': MQdht,
+    'Temp': MQds,
+    'TempHumidPress': MQbme,
+    'distance': MQhcsr,
+    'shellyflood': MQShellyFlood,
+    'analog': MQAnalog,
+    's31': MQs31,
+    'raw': MQraw,
+    'RGBW': MQRGBWstrip,
+    'ratgdo': MQratgdo,
+}
 
-- LOGGER: to create log entries
-- Custom: to access the custom data class
-- ISY:    to communicate directly with the ISY (not commonly used)
-"""
-LOGGER = udi_interface.LOGGER
-LOG_HANDLER = udi_interface.LOG_HANDLER
-Custom = udi_interface.Custom
-ISY = udi_interface.ISY
 
-class Controller(udi_interface.Node):
+class Controller(Node):
     id = 'mqctrl'
 
-    def __init__(self, polyglot, primary, address, name):
+    def __init__(self, poly, primary, address, name):
         """
         super
         self definitions
@@ -55,17 +53,31 @@ class Controller(udi_interface.Node):
         ready
         we exist!
         """
-        super().__init__(polyglot, primary, address, name)
+        super().__init__(poly, primary, address, name)
 
         # useful global variables
-        self.poly = polyglot
+        self.poly = poly
         self.primary = primary # defined as self.address by main
         self.address = address
         self.name = name
+
+        # storage arrays & conditions
         self.n_queue = []
+        self.queue_condition = Condition()
+
+        # Events & in
+        self.ready_event = Event()
+        self.all_handlers_st_event = Event()
+        self.stop_sse_client_event = Event()
+        self.discovery_in = False
+
+        # startup completion flags
+        self.handler_params_st = None
+        self.handler_data_st = None
+        self.handler_typedparams_st = None
+        self.handler_typeddata_st = None
 
         # here are specific variables to this controller
-        self.discovery = False
         self.mqtt_server = "localhost"
         self.mqtt_port = 1884
         self.mqtt_user = 'admin'
@@ -77,132 +89,191 @@ class Controller(udi_interface.Node):
         # Maps to device IDs
         self.status_topics_to_devices: Dict[str, str] = {}
         self.valid_configuration = False
-        self.parmDone = False
 
-        # Create data storage classes to hold specific data that we need
-        # to interact with.  
-        self.Parameters = Custom(polyglot, 'customparams')
-        self.Notices = Custom(polyglot, 'notices')
-        self.TypedParameters = Custom(polyglot, 'customtypedparams')
-        self.TypedData = Custom(polyglot, 'customtypeddata')
+        # Create data storage classes
+        self.Parameters      = Custom(poly, 'customparams')
+        self.Notices         = Custom(poly, 'notices')
+        self.TypedParameters = Custom(poly, 'customtypedparams')
+        self.TypedData       = Custom(poly, 'customtypeddata')
 
         # Subscribe to various events from the Interface class.
-        self.poly.subscribe(self.poly.START, self.start, address)
-        self.poly.subscribe(self.poly.LOGLEVEL, self.handleLevelChange)
-        self.poly.subscribe(self.poly.CUSTOMPARAMS, self.parameterHandler)
+        self.poly.subscribe(self.poly.START,             self.start, address)
+        self.poly.subscribe(self.poly.LOGLEVEL,          self.handleLevelChange)
+        self.poly.subscribe(self.poly.CUSTOMPARAMS,      self.parameterHandler)
         self.poly.subscribe(self.poly.CUSTOMTYPEDPARAMS, self.typedParameterHandler)
-        self.poly.subscribe(self.poly.CUSTOMTYPEDDATA, self.typedDataHandler)
-        self.poly.subscribe(self.poly.POLL, self.poll)
-        self.poly.subscribe(self.poly.STOP, self.stop)
-        self.poly.subscribe(self.poly.DISCOVER, self.discover)
-        self.poly.subscribe(self.poly.ADDNODEDONE, self.node_queue)
+        self.poly.subscribe(self.poly.CUSTOMTYPEDDATA,   self.typedDataHandler)
+        self.poly.subscribe(self.poly.POLL,              self.poll)
+        self.poly.subscribe(self.poly.STOP,              self.stop)
+        self.poly.subscribe(self.poly.DISCOVER,          self.discover_cmd)
+        self.poly.subscribe(self.poly.ADDNODEDONE,       self.node_queue)
 
         # Tell the interface we have subscribed to all the events we need.
         # Once we call ready(), the interface will start publishing data.
         self.poly.ready()
 
         # Tell the interface we exist.  
-        self.poly.addNode(self)
+        self.poly.addNode(self, conn_status='ST')
+        
 
+    def start(self):
+        """
+        Called by handler during startup.
+        """
+        LOGGER.info(f"Virtual Devices PG3 NodeServer {self.poly.serverdata['version']}")
+        self.Notices.clear()
+        self.Notices['hello'] = 'Start-up'
+        self.setDriver('ST', 1, report = True, force = True)
+
+        # Send the profile files to the ISY if neccessary or version changed.
+        self.poly.updateProfile()
+
+        # Send the default custom parameters documentation file to Polyglot
+        self.poly.setCustomParamsDoc()
+
+        # Initializing a heartbeat
+        self.heartbeat()
+
+        # Wait for all handlers to finish
+        LOGGER.warning(f'Waiting for all handlers to complete...')
+        self.Notices['waiting'] = 'Waiting on valid configuration'
+        self.all_handlers_st_event.wait(timeout=60)
+        if not self.all_handlers_st_event.is_set():
+            # start-up failed
+            LOGGER.error("Timed out waiting for handlers to startup")
+            self.setDriver('ST', 2) # start-up failed
+            self.Notices['error'] = 'Error start-up timeout.  Check config & restart'
+            return
+
+        # Discover and wait for discovery to complete
+        discoverSuccess = self.discover_cmd()
+
+        # first update from Gateway
+        if not discoverSuccess:
+            # start-up failed
+            LOGGER.error(f'First discovery failed!!! exit {self.name}')
+            self.Notices['error'] = 'Error first discovery.  Check config & restart'
+            self.setDriver('ST', 2)
+            return
+
+        # Discover and wait for discovery to complete
+        mqttSuccess = self._mqtt_start()
+
+        # first update from Gateway
+        if not mqttSuccess:
+            # start-up failed
+            LOGGER.error(f'MQTT connection failed!!! exit {self.name}')
+            self.Notices['error'] = 'Error MQTT connection.  Check config & restart'
+            self.setDriver('ST', 2)
+            return
+
+        self.Notices.delete('waiting')        
+        LOGGER.info('Started MQTT NodeServer v%s', self.poly.serverdata)
+        self.query(command = f"{self.name}: STARTUP")
+
+        # signal to the nodes, its ok to start
+        self.ready_event.set()
+
+        # clear inital start-up message
+        if self.Notices.get('hello'):
+            self.Notices.delete('hello')
+
+        LOGGER.info(f'exit {self.name}')
+
+        
+    def _mqtt_start(self):
+        """Initialize and connect to the user's MQTT server."""
+        self.mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+        self.mqttc.on_connect = self._on_connect
+        self.mqttc.on_disconnect = self._on_disconnect
+        self.mqttc.on_message = self._on_message
+        self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
+
+        try:
+            self.mqttc.connect(self.mqtt_server, self.mqtt_port, keepalive=10)
+            self.mqttc.loop_start()
+        except Exception as ex:
+            LOGGER.error(f"Error connecting to Poly MQTT broker: {ex}")
+            self.Notices['mqtt'] = 'Error on user MQTT connection'
+            return False  # Early exit on failure
+
+        while not self.mqttc.is_connected():
+            LOGGER.error("Start: Waiting on user MQTT connection")
+            self.Notices['mqtt'] = 'Waiting on user MQTT connection'
+            time.sleep(3)
+
+        self.Notices.clear()
+        self.mqtt_subscribe()
+        LOGGER.info("Start Done...")
+        return True
+
+
+    def node_queue(self, data):
         '''
         node_queue() and wait_for_node_event() create a simple way to wait
         for a node to be created.  The nodeAdd() API call is asynchronous and
         will return before the node is fully created. Using this, we can wait
         until it is fully created before we try to use it.
         '''
-    def node_queue(self, data):
-        self.n_queue.append(data['address'])
+        address = data.get('address')
+        if address:
+            with self.queue_condition:
+                self.n_queue.append(address)
+                self.queue_condition.notify()
 
     def wait_for_node_done(self):
-        while len(self.n_queue) == 0:
-            time.sleep(0.3)
-        self.n_queue.pop()
+        with self.queue_condition:
+            while not self.n_queue:
+                self.queue_condition.wait(timeout = 0.2)
+            self.n_queue.pop()
+        
 
-    def start(self):
-        self.Notices['hello'] = 'Start-up'
-
-        self.last = 0.0
-        # Send the profile files to the ISY if necessary. The profile version
-        # number will be checked and compared. If it has changed since the last
-        # start, the new files will be sent.
-        self.poly.updateProfile()
-
-        # Send the default custom parameters documentation file to Polyglot
-        # for display in the dashboard.
-        self.poly.setCustomParamsDoc()
-
-        # Initializing a heartbeat is an example of something you'd want
-        # to do during start.  Note that it is not required to have a
-        # heartbeat in your node server
-        self.heartbeat(True)
-
-        while self.valid_configuration is False:
-            LOGGER.info('Start: Waiting on valid configuration')
-            self.Notices['waiting'] = 'Waiting on valid configuration'
-            time.sleep(5)
-
-        # get user mqtt server connection going
-        self.mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
-        self.mqttc.on_connect = self._on_connect
-        self.mqttc.on_disconnect = self._on_disconnect
-        self.mqttc.on_message = self._on_message
-        self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
-        while not self.parmDone:
-            LOGGER.info("Start: Waiting on first Discovery Completion")
-            time.sleep(1)
-        try:
-            self.mqttc.connect(self.mqtt_server, self.mqtt_port, 10)
-            self.mqttc.loop_start()
-        except Exception as ex:
-            LOGGER.error("Error connecting to Poly MQTT broker {}".format(ex))
-            self.Notices['mqtt'] = 'Error on user MQTT connection'
-
-        connected = self.mqttc.is_connected()
-        while not connected:
-            LOGGER.error('Start: Waiting on user MQTT connection')
-            self.Notices['mqtt'] = 'Waiting on user MQTT connection'
-            time.sleep(3)
-            connected = self.mqttc.is_connected()
-        self.removeNoticesAll()
-        LOGGER.info("Start Done...")
-
-    """
-    Called via the CUSTOMPARAMS event. When the user enters or
-    updates Custom Parameters via the dashboard. The full list of
-    parameters will be sent to your node server via this event.
-
-    Here we're loading them into our local storage so that we may
-    use them as needed.
-
-    New or changed parameters are marked so that you may trigger
-    other actions when the user changes or adds a parameter.
-
-    NOTE: Be careful to not change parameters here. Changing
-    parameters will result in a new event, causing an infinite loop.
-    """
     def parameterHandler(self, params):
-        self.removeNoticesAll()
-        self.Parameters.load(params)
+        """
+        Called via the CUSTOMPARAMS event. When the user enters or
+        updates Custom Parameters via the dashboard.
+        """
         LOGGER.info('parmHandler: Loading parameters now')
-        if self.checkParams():
-            self.discover_nodes()
-            self.parmDone = True
+        self.Parameters.load(params)
+        self.handler_params_st = True
         LOGGER.info('parmHandler Done...')
 
-    """
-    Called via the CUSTOMTYPEDPARAMS event. This event is sent When
-    the Custom Typed Parameters are created.  See the checkParams()
-    below.  Generally, this event can be ignored.
-
-    Here we're re-load the parameters into our local storage.
-    The local storage should be considered read-only while processing
-    them here as changing them will cause the event to be sent again,
-    creating an infinite loop.
-    """
+        
     def typedParameterHandler(self, params):
-        self.TypedParameters.load(params)
+        """
+        Called via the CUSTOMTYPEDPARAMS event. This event is sent When
+        the Custom Typed Parameters are created.
+        """
         LOGGER.debug('Loading typed parameters now')
-        LOGGER.debug(f'typedParms: {params}')
+        self.TypedParameters.load(params)
+        LOGGER.debug(params)
+        self.handler_typedparams_st = True
+        self.check_handlers()
+
+
+    def typedDataHandler(self, data):
+        """
+        Called via the CUSTOMTYPEDDATA event. This event is sent when
+        the user enters or updates Custom Typed Parameters via the dashboard.
+        'params' will be the full list of parameters entered by the user.
+        """
+        LOGGER.debug('Loading typed data now')
+        if data is None:
+            LOGGER.warning("No custom data")
+        else:
+            self.TypedData.load(data)
+        LOGGER.debug(f'Loaded typed data {data}')
+        self.handler_typeddata_st = True
+        self.check_handlers()
+
+
+    def check_handlers(self):
+        """
+        Once all start-up parameters are done then set event.
+        """
+        if (self.handler_params_st and self.handler_data_st and
+            self.handler_typedparams_st and self.handler_typeddata_st):
+            self.all_handlers_st_event.set()
+
 
     def checkParams(self):
         # pull in Parameters from Node Server Configuration page
@@ -243,80 +314,75 @@ class Controller(udi_interface.Node):
             LOGGER.error("checkParams: NO devfile or devlist !!!! Must be configured!!")
             return False
 
-        self.valid_configuration = True
         return True
 
-    """
-    Called via the CUSTOMTYPEDDATA event. This event is sent when
-    the user enters or updates Custom Typed Parameters via the dashboard.
-    'params' will be the full list of parameters entered by the user.
-
-    Here we're loading them into our local storage so that we may
-    use them as needed.  The local storage should be considered 
-    read-only while processing them here as changing them will
-    cause the event to be sent again, creating an infinite loop.
-    """
-    def typedDataHandler(self, params):
-        self.TypedData.load(params)
-        LOGGER.debug('Loading typed data now')
-        LOGGER.debug(params)
-
-    """
-    Called via the LOGLEVEL event.
-    """
+    
     def handleLevelChange(self, level):
-        LOGGER.info('New log level: {}'.format(level))
-
-    """
-    Called via the POLL event.  The POLL event is triggerd at
-    the intervals specified in the node server configuration. There
-    are two separate poll events, a long poll and a short poll. Which
-    one is indicated by the flag.  flag will hold the poll type either
-    'longPoll' or 'shortPoll'.
-
-    Use this if you want your node server to do something at fixed
-    intervals.
-    """
-    def poll(self, flag):
-        if 'longPoll' in flag:
-            LOGGER.debug('longPoll re-parse updateallfromserver (controller)')
+        """
+        Called via the LOGLEVEL event, to handle log level change.
+        """
+        LOGGER.info(f'enter: level={level}')
+        if level['level'] < 10:
+            LOGGER.info("Setting basic config to DEBUG...")
+            LOG_HANDLER.set_basic_config(True,logging.DEBUG)
         else:
+            LOGGER.info("Setting basic config to WARNING...")
+            LOG_HANDLER.set_basic_config(True,logging.WARNING)
+        LOGGER.info(f'exit: level={level}')
+
+
+    def poll(self, flag):
+        """
+        Short & Long polling, only heartbeat in Controller
+        """
+        # no updates until node is through start-up
+        if not self.ready_event:
+            LOGGER.error(f"Node not ready yet, exiting")
+            return
+
+        if 'shortPoll' in flag:
+            LOGGER.debug('longPoll (controller)')
             self.heartbeat()
-            LOGGER.debug('shortPoll check for events (controller)')
+
 
     def query(self, command = None):
         """
-        The query method will be called when the ISY attempts to query the
-        status of the node directly.  You can do one of two things here.
-        You can send the values currently held by Polyglot back to the
-        ISY by calling reportDriver() or you can actually query the 
-        device represented by the node and report back the current 
-        status.
+        Query all nodes from the gateway.
         """
-        LOGGER.info(f"Query")
+        LOGGER.info(f"Enter {command}")
         nodes = self.poly.getNodes()
         for node in nodes:
             nodes[node].reportDrivers()
+        LOGGER.debug(f"Exit")
 
-    def updateProfile(self,command):
-        LOGGER.info('update profile')
-        st = self.poly.updateProfile()
-        return st
 
-    def discover(self, command = None):
+    def discover_cmd(self, command = None):
         """
-        Do discovery here. Called from controller start method
-        and from DISCOVER command received from ISY
-        parse out the devices contained in devlist.
+        Call node discovery here. Called from controller start method
+        and from DISCOVER command received from ISY.
+        Calls checkParams, so can be used after update of devFile or config
         """
-        self.discover_nodes()
-        connected = self.mqttc.is_connected()
-        if connected:
-            self.mqtt_subscribe()
+        LOGGER.info(command)
+        success = False
+        if self.discovery_in:
+            LOGGER.info('Discover already running.')
+            return success
 
-    def discover_nodes(self, command = None):
+        self.discovery_in = True
+        LOGGER.info("In Discovery...")
+
+        if self.checkParams() and self._discover():
+            success = True
+            LOGGER.info("Discovery Success")
+        else:
+            LOGGER.error("Discovery Failure")
+        self.discovery_in = False            
+        return success
+
+
+    def _discover(self):
         LOGGER.info(f"discovery start")
-        self.discovery = True
+        self.discovery_in = True
         nodes_new = []
         for dev in self.devlist:
             if (
@@ -456,54 +522,9 @@ class Controller(udi_interface.Node):
                 LOGGER.info(f"need to delete node {node}")
                 self._remove_status_topics(node)
                 self.poly.delNode(node)
-        self.discovery = False
+        self.discovery_in = False
         LOGGER.info(f"Done Discovery")
         return True
-
-    def delete(self):
-        """
-        This is called by Polyglot upon deletion of the NodeServer. If the
-        process is co-resident and controlled by Polyglot, it will be
-        terminiated within 5 seconds of receiving this message.
-        """
-        LOGGER.info('bye bye ... deleted.')
-
-    def stop(self):
-        """
-        This is called by Polyglot when the node server is stopped.  You have
-        the opportunity here to cleanly disconnect from your device or do
-        other shutdown type tasks.
-        """
-        LOGGER.info("MQTT is stopping")
-        if self.mqttc is not None:
-            self.mqttc.loop_stop()
-            self.mqttc.disconnect()
-        self.poly.stop()
-
-        LOGGER.info('MQTT stopped...')
-
-    def heartbeat(self,init=False):
-        """
-        This is a heartbeat function.  It uses the
-        long poll interval to alternately send a ON and OFF command back to
-        the ISY.  Programs on the ISY can then monitor this and take action
-        when the heartbeat fails to update.
-        """
-        LOGGER.debug(f'heartbeat: init={init}')
-        if init is not False:
-            self.hb = init
-        LOGGER.debug(f'heartbeat: hb={self.hb}')
-        if self.hb == 0:
-            self.reportCmd("DON",2)
-            self.hb = 1
-        else:
-            self.reportCmd("DOF",2)
-            self.hb = 0
-
-    def removeNoticesAll(self, command = None):
-        LOGGER.info('remove_notices_all: notices={}'.format(self.Notices))
-        # Remove all existing notices
-        self.Notices.clear()
 
     def _add_status_topics(self, dev, status_topics: List[str]):
         for status_topic in status_topics:
@@ -538,7 +559,7 @@ class Controller(udi_interface.Node):
             LOGGER.info("Poly MQTT graceful disconnection")
 
     def _on_message(self, mqttc, userdata, message):
-        if self.discovery == True:
+        if self.discovery_in == True:
             return
         topic = message.topic
         payload = message.payload.decode("utf-8")
@@ -625,16 +646,54 @@ class Controller(udi_interface.Node):
         LOGGER.info("Subscriptions Done")
 
 
+    def delete(self, command = None):
+        """
+        This is called by Polyglot upon deletion of the NodeServer. If the
+        process is co-resident and controlled by Polyglot, it will be
+        terminiated within 5 seconds of receiving this message.
+        """
+        LOGGER.info(command)
+        self.setDriver('ST', 0, report = True, force = True)
+        LOGGER.info('bye bye ... deleted.')
+
+
+    def stop(self, command = None):
+        """
+        This is called by Polyglot when the node server is stopped.  You have
+        the opportunity here to cleanly disconnect from your device or do
+        other shutdown type tasks.
+        """
+        LOGGER.info(command)
+        self.setDriver('ST', 0, report = True, force = True)
+        self.Notices.clear()
+        if self.mqttc is not None:
+            self.mqttc.loop_stop()
+            self.mqttc.disconnect()
+        LOGGER.info('NodeServer stopped.')
+
+
+    def heartbeat(self):
+        """
+        Heartbeat function uses the long poll interval to alternately send a ON and OFF
+        command back to the ISY.  Programs on the ISY can then monitor this.
+        """
+        LOGGER.debug(f'heartbeat: hb={self.hb}')
+        command = "DOF" if self.hb else "DON"
+        self.reportCmd(command, 2)
+        self.hb = not self.hb
+        LOGGER.debug("Exit")
+
+
     # Status that this node has. Should match the 'sts' section
     # of the nodedef file.
     drivers = [
-        {"driver": "ST", "value": 1, "uom": 2, "name": "NS Online"},
+        {"driver": "ST", "value": 1, "uom": 25, "name": "Connected"},
     ]
 
     # Commands that this node can handle.  Should match the
     # 'accepts' section of the nodedef file.
     commands = {
-        'DISCOVER': discover,
+        'DISCOVER': discover_cmd,
         'QUERY': query,
     }
 

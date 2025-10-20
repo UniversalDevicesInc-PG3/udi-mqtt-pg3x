@@ -7,6 +7,11 @@ CMD-CTRL-DISCOVER-NAME = Discover
 CMD-CTRL-QUERY-NAME = Query
 ST-CTRL-ST-NAME = NodeServer Online
 
+# ctd
+CTD-0 = Disconnected
+CTD-1 = Connected
+CTD-2 = Failed
+
 # switch
 ND-MQSW-NAME = MQTT Switch
 ND-MQSW-ICON = GenericRsp
