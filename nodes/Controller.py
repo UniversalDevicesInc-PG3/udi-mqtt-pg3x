@@ -89,20 +89,22 @@ class Controller(Node):
         self.valid_configuration = False
 
         # Create data storage classes
+        self.Notices                = Custom(poly, 'notices')
         self.Parameters      = Custom(poly, 'customparams')
-        self.Notices         = Custom(poly, 'notices')
+        self.Data                   = Custom(poly, 'customdata')
         self.TypedParameters = Custom(poly, 'customtypedparams')
         self.TypedData       = Custom(poly, 'customtypeddata')
 
         # Subscribe to various events from the Interface class.
         self.poly.subscribe(self.poly.START,             self.start, address)
+        self.poly.subscribe(self.poly.POLL,              self.poll)
         self.poly.subscribe(self.poly.LOGLEVEL,          self.handleLevelChange)
         self.poly.subscribe(self.poly.CUSTOMPARAMS,      self.parameterHandler)
-        self.poly.subscribe(self.poly.CUSTOMTYPEDPARAMS, self.typedParameterHandler)
-        self.poly.subscribe(self.poly.CUSTOMTYPEDDATA,   self.typedDataHandler)
-        self.poly.subscribe(self.poly.POLL,              self.poll)
+        self.poly.subscribe(self.poly.CUSTOMDATA,        self.dataHandler)
         self.poly.subscribe(self.poly.STOP,              self.stop)
         self.poly.subscribe(self.poly.DISCOVER,          self.discover_cmd)
+        self.poly.subscribe(self.poly.CUSTOMTYPEDDATA,   self.typedDataHandler)
+        self.poly.subscribe(self.poly.CUSTOMTYPEDPARAMS, self.typedParameterHandler)
         self.poly.subscribe(self.poly.ADDNODEDONE,       self.node_queue)
 
         # Tell the interface we have subscribed to all the events we need.
@@ -224,6 +226,16 @@ class Controller(Node):
                 self.queue_condition.wait(timeout = 0.2)
             self.n_queue.pop()
         
+
+    def dataHandler(self,data):
+        LOGGER.debug(f'enter: Loading data {data}')
+        if data is None:
+            LOGGER.warning("No custom data")
+        else:
+            self.Data.load(data)
+        self.handler_data_st = True
+        self.check_handlers()
+
 
     def parameterHandler(self, params):
         """
