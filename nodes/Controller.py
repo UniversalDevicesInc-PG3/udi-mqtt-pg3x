@@ -55,11 +55,9 @@ class Controller(Node):
         """
         super().__init__(poly, primary, address, name)
 
-        # useful global variables
-        self.poly = poly
-        self.primary = primary # defined as self.address by main
-        self.address = address
-        self.name = name
+        # importand flags, timers, vars
+        self.hb = 0 # heartbeat
+        self.numNodes = 0
 
         # storage arrays & conditions
         self.n_queue = []
@@ -697,7 +695,7 @@ class Controller(Node):
         LOGGER.info(command)
         self.setDriver('ST', 0, report = True, force = True)
         self.Notices.clear()
-        if self.mqttc is not None:
+        if self.mqttc:
             self.mqttc.loop_stop()
             self.mqttc.disconnect()
         LOGGER.info('NodeServer stopped.')
