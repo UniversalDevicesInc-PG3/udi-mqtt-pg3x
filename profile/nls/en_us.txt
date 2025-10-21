@@ -6,6 +6,7 @@ ND-mqctrl-ICON = GenericCtl
 CMD-CTRL-DISCOVER-NAME = Discover
 CMD-CTRL-QUERY-NAME = Query
 ST-CTRL-ST-NAME = NodeServer Online
+ST-ctl-GV0-NAME = NumberOfNodes
 
 # ctd
 CTD-0 = Disconnected

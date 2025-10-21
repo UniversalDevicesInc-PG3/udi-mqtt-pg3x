@@ -1,5 +1,4 @@
-"""
-mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
+""" mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
 (C) 2025 Stephen Jenkins
 
@@ -13,7 +12,8 @@ from typing import Dict, List
 
 # external libraries
 from udi_interface import Node, LOGGER, Custom, LOG_HANDLER
-import paho.mqtt.client as mqtt
+from paho.mqtt.client import Client
+from paho.mqtt.enums import CallbackAPIVersion
 
 # personal libraries
 pass
@@ -182,7 +182,7 @@ class Controller(Node):
         
     def _mqtt_start(self):
         """Initialize and connect to the user's MQTT server."""
-        self.mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+        self.mqttc = Client(CallbackAPIVersion.VERSION1)
         self.mqttc.on_connect = self._on_connect
         self.mqttc.on_disconnect = self._on_disconnect
         self.mqttc.on_message = self._on_message
@@ -381,9 +381,30 @@ class Controller(Node):
 
 
     def _discover(self):
+        """
+        Discover all nodes from the gateway.
+        """
+        success = False
+        nodes_existing = self.poly.getNodes()
+        LOGGER.debug(f"current nodes = {nodes_existing}")
+        nodes_old = [node for node in nodes_existing if node != self.id]
+        nodes_new = []
+
+        try:
+            self._discover_nodes(nodes_existing, nodes_new)
+            self._cleanup_nodes(nodes_new, nodes_old)
+            self.numNodes = len(nodes_new)
+            self.setDriver('GV0', self.numNodes)
+            success = True
+            LOGGER.info(f"Discovery complete. success = {success}")
+        except Exception as ex:
+            LOGGER.error(f'Discovery Failure: {ex}', exc_info=True)            
+        return success
+
+
+    def _discover_nodes(self, nodes_existing, nodes_new):
         LOGGER.info(f"discovery start")
         self.discovery_in = True
-        nodes_new = []
         for dev in self.devlist:
             if (
                     "id" not in dev
@@ -398,7 +419,7 @@ class Controller(Node):
             else:
                 name = dev["id"]  # if there is no 'friendly name' use the ID instead
             address = Controller._format_device_address(dev)
-            if not self.poly.getNode(address):
+            if address not in nodes_existing:
                 if dev["type"] == "switch":
                     LOGGER.info(f"Adding {dev['type']}, {name}")
                     self.poly.addNode(MQSwitch(self.poly, self.address, address, name, dev))
@@ -514,24 +535,26 @@ class Controller(Node):
         LOGGER.info("Done adding nodes.")
         LOGGER.debug(f'DEVLIST: {self.devlist}')
 
+        
+    def _cleanup_nodes(self, nodes_new, nodes_old):    
         # routine to remove nodes which exist but are not in devlist
-        nodes = self.poly.getNodes()
-        nodes_get = {key: nodes[key] for key in nodes if key != self.id}
-        for node in nodes_get:
+        for node in nodes_old:
             if (node not in nodes_new):
                 LOGGER.info(f"need to delete node {node}")
                 self._remove_status_topics(node)
                 self.poly.delNode(node)
         self.discovery_in = False
-        LOGGER.info(f"Done Discovery")
+        LOGGER.info(f"Done Cleanup")
         return True
 
+    
     def _add_status_topics(self, dev, status_topics: List[str]):
         for status_topic in status_topics:
             self.status_topics.append(status_topic)
             self.status_topics_to_devices[status_topic] = Controller._format_device_address(dev)
             # should be keyed to `id` instead of `status_topic`
 
+            
     def _remove_status_topics(self, node):
         for status_topic in self.status_topics_to_devices:
             if self.status_topics_to_devices[status_topic] == self.poly.getNode(node):
@@ -540,6 +563,7 @@ class Controller(Node):
                 LOGGER.info(f"remove topic = {status_topic}")
             # should be keyed to `id` instead of `status_topic`
 
+            
     def _on_connect(self, mqttc, userdata, flags, rc):
         if rc == 0:
             LOGGER.info("Poly MQTT Connected")
@@ -547,6 +571,7 @@ class Controller(Node):
         else:
             LOGGER.error("Poly MQTT Connect failed")
 
+            
     def _on_disconnect(self, mqttc, userdata, rc):
         if rc != 0:
             LOGGER.warning("Poly MQTT disconnected, trying to re-connect")
@@ -558,6 +583,7 @@ class Controller(Node):
         else:
             LOGGER.info("Poly MQTT graceful disconnection")
 
+            
     def _on_message(self, mqttc, userdata, message):
         if self.discovery_in == True:
             return
@@ -594,10 +620,12 @@ class Controller(Node):
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
+            
     def _dev_by_topic(self, topic):
         LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
         return self.status_topics_to_devices.get(topic, None)
 
+    
     def _get_device_address_from_sensor_id(self, topic, sensor_type):
         LOGGER.debug(f'GDA1: topic: {topic}  sensor_type: {sensor_type}')
         LOGGER.debug(f'GDA1b: devlist: {self.devlist}')
@@ -615,14 +643,17 @@ class Controller(Node):
             LOGGER.debug(f'GDA4: revert to topic NODE_ID3: {self.node_id}')
         return self.node_id
 
+    
     @staticmethod
     def _format_device_address(dev) -> str:
         return dev["id"].lower().replace("_", "").replace("-", "_")[:14]
 
+    
     def mqtt_pub(self, topic, message):
         LOGGER.debug(f"mqtt_pub: topic: {topic}, message: {message}")
         self.mqttc.publish(topic, message, retain=False)
 
+        
     def mqtt_subscribe(self):
         LOGGER.info("Poly MQTT subscribing...")
         result = 255
@@ -687,7 +718,8 @@ class Controller(Node):
     # Status that this node has. Should match the 'sts' section
     # of the nodedef file.
     drivers = [
-        {"driver": "ST", "value": 1, "uom": 25, "name": "Connected"},
+        {'driver': 'ST', 'value': 1, 'uom': 25, 'name': "Controller Status"},
+        {'driver': 'GV0', 'value': 0, 'uom': 107, 'name': "NumberOfNodes"},
     ]
 
     # Commands that this node can handle.  Should match the

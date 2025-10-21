@@ -1,83 +1,114 @@
 <editors>
-    <editor id="BOOL">
-        <range uom="2" subset="0,1" />
-    </editor>
 	<editor id="CTD">
 		<range uom="25" subset="0,1,2" nls="CTD" />
 	</editor>
+	
+	<editor id="ID">
+	  <range uom="107" min="0" max="9999"/>
+	</editor>
+
+    <editor id="BOOL">
+        <range uom="2" subset="0,1" />
+    </editor>
+	
     <editor id="ONOFF">
         <range uom="78"/>
     </editor>
+	
     <editor id="TEMPF">
         <range uom="17" min="-40" max="176" prec="2" />
     </editor>
+	
     <editor id="HUM">
         <range uom="22" min="0" max="100" prec="2" />
     </editor>
+	
     <editor id="DEWF">
         <range uom="17" min="-40" max="176" prec="2" />
     </editor>
+	
     <editor id="PRESS">
 	    <range uom="23" min="0" max="40" prec="2" />
     </editor>
+	
     <editor id="DIST">
             <range uom="5" min="0" max="500" prec="3" />
     </editor>
+	
     <editor id="ANALOG">
             <range uom="56" min="-2147483647" max="2147483647" prec="0" />
     </editor>
+	
     <editor id="LEDCLR">
         <range uom="100" min="0" max="255" prec="0" />
     </editor>
+	
     <editor id="LIGHT">
         <range uom="36" min="0" max="255" prec="0" />
     </editor>
+	
     <editor id="SECOND">
         <range uom="58" min="0" max="600" prec="0" />
     </editor>
+	
     <editor id="CURRENT">
         <range uom="1" min="0" max="20" step="0.005" prec="3" />
     </editor>
+	
     <editor id="CURPOW">
         <range uom="73" min="0" max="2500" step="1" prec="0" />
     </editor>
+	
     <editor id="VOLT">
         <range uom="72" min="0" max="300" step="1" prec="0" />
     </editor>
+	
     <editor id="FACTOR">
         <range uom="53" min="-1" max="1" step="0.05" prec="2" />
     </editor>
+	
     <editor id="TOTPOW">
         <range uom="33" min="0" max="999999" step="0.05" prec="2" />
     </editor>
+	
     <editor id="ST_FLAG">
         <range uom="25" subset="0-12" nls="FLAG" />
     </editor>
+	
     <editor id="ST_FAN">
         <range uom="25" subset="0-3" nls="FANSPEED" />
     </editor>
+	
     <editor id="BATTERY">
         <range uom="51" min="0" max="100"  prec="0" />
     </editor>
-        <editor id="ST_DIMMER">
+	
+    <editor id="ST_DIMMER">
         <range uom="51" min="0" max="100" step="10" prec="0" />
     </editor>
+	
     <editor id="GAVAIL">
         <range uom="2" subset="0,1" nls="GAVAIL" />
     </editor>
+	
     <editor id="GLIGHT">
         <range uom="2" subset="0,1" nls="GLIGHT" />
     </editor>
+	
     <editor id="GDOOR">
         <range uom="25" subset="0,1,2,3,4" nls="GDOOR" />
     </editor>
+	
     <editor id="GMOTION">
         <range uom="2" subset="0,1" nls="GMOTION" />
     </editor>
+	
     <editor id="GLOCK">
         <range uom="2" subset="0,1" nls="GLOCK" />
     </editor>
+	
     <editor id="GOBST">
         <range uom="2" subset="0,1" nls="GOBST" />
     </editor>
+	
 </editors>
