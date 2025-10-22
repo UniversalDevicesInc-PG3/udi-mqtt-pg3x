@@ -1,0 +1,12 @@
+{
+	"venvPath": "/Users/stephenjenkins/.local/share/virtualenvs",
+    "venv": "udi-mqtt-pg3x-zdcKVPD5",
+	"pythonVersion": "3.11",
+	"pythonPlatform": "Darwin",
+	"extraPaths": ["./", "./src"]
+	"reportImportCycles": false,
+	"reportMissingTypeStubs": false,
+	"typeCheckingMode": "basic"
+}
+
+
