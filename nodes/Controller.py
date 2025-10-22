@@ -368,6 +368,10 @@ class Controller(Node):
                              general_config.get("mqtt_user") or 'admin')
             self.mqtt_password = (self.Parameters.get("mqtt_password") or 
                                  general_config.get("mqtt_password") or 'admin')
+            self.status_prefix = (self.Parameters.get("status_prefix") or 
+                                 general_config.get("status_prefix"))
+            self.control_prefix = (self.Parameters.get("control_prefix") or 
+                                 general_config.get("control_prefix"))
         except (ValueError, TypeError) as ex:
             LOGGER.error(f"Failed to parse MQTT parameters: {ex}")
             return False
