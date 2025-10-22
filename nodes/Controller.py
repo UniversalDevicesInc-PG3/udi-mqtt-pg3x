@@ -184,7 +184,7 @@ class Controller(Node):
         """Initialize and connect to the user's MQTT server."""
         self.mqttc = Client(CallbackAPIVersion.VERSION1)
         self.mqttc.on_connect = self._on_connect
-        self.mqttc.on_disconnect = self._on_disconnect
+        self.mqttc.on_disconnect = self._on_disconnect  # type: ignore
         self.mqttc.on_message = self._on_message
         self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
 
@@ -286,44 +286,91 @@ class Controller(Node):
 
 
     def checkParams(self):
-        # pull in Parameters from Node Server Configuration page
-        self.mqtt_server = self.Parameters["mqtt_server"] or 'localhost'
-        self.mqtt_port = int(self.Parameters["mqtt_port"] or 1884)
-        self.mqtt_user = self.Parameters["mqtt_user"] or 'admin'
-        self.mqtt_password = self.Parameters["mqtt_password"] or 'admin'
-
-        # upload the device topics yaml file (multiple devices)
-        if self.Parameters["devfile"] is not None:
-            try:
-                x = self.Parameters["devfile"]
-                f = open(x)
-            except Exception as ex:
-                LOGGER.error("Failed to open {}: {}".format(self.Parameters["devfile"], ex))
+        """Load and validate configuration parameters from devfile or devlist."""
+        general_config = {}
+        
+        # Load device configuration from YAML file
+        if self.Parameters.get("devfile"):
+            if not self._load_devfile_config(general_config):
                 return False
-            try:
-                dev_yaml = yaml.safe_load(f.read())  # upload devfile into data
-                f.close()
-            except Exception as ex:
-                LOGGER.error(f"checkParams: Failed to parse {self.Parameters['devfile']} content: {ex}")
-                return False
-            if "devices" not in dev_yaml:
-                LOGGER.error(f"checkParams: Manual discovery file {self.Parameters['devfile']} is missing bulbs section")
-                return False
-            self.devlist = dev_yaml["devices"]  # transfer devfile into devlist
-
-        # upload the device topic from the Node Server Configuration Page
-        elif self.Parameters["devlist"] is not None:
-            try:
-                x= self.Parameters['devlist']
-                if type(x) == str:
-                    self.devlist = json.loads(x)
-            except Exception as ex:
-                LOGGER.error("Failed to parse the devlist: {}".format(ex))
+        
+        # Load device configuration from JSON string
+        elif self.Parameters.get("devlist"):
+            if not self._load_devlist_config():
                 return False
         else:
-            LOGGER.error("checkParams: NO devfile or devlist !!!! Must be configured!!")
+            LOGGER.error("checkParams: No devfile or devlist configured! Must be configured.")
             return False
 
+        # Load MQTT parameters with fallback to general config
+        if not self._load_mqtt_parameters(general_config):
+            return False
+        # Success
+        return True
+    
+
+    def _load_devfile_config(self, general_config):
+        """Load device configuration from YAML file."""
+        devfile_path = self.Parameters["devfile"]
+        if not devfile_path or not isinstance(devfile_path, str):
+            LOGGER.error("Invalid devfile path provided")
+            return False
+            
+        try:
+            with open(devfile_path, 'r', encoding='utf-8') as file:
+                dev_yaml = yaml.safe_load(file)
+        except OSError as ex:
+            LOGGER.error(f"Failed to open {devfile_path}: {ex}")
+            return False
+        except yaml.YAMLError as ex:
+            LOGGER.error(f"Failed to parse {devfile_path} content: {ex}")
+            return False
+        
+        if "devices" not in dev_yaml:
+            LOGGER.error(f"Manual discovery file {devfile_path} is missing devices section")
+            return False
+            
+        self.devlist.update(dev_yaml["devices"])
+        general_config.update(dev_yaml.get("general", {}))
+        return True
+
+    def _load_devlist_config(self):
+        """Load device configuration from JSON string."""
+        devlist_data = self.Parameters["devlist"]
+        if not devlist_data:
+            LOGGER.error("No devlist data provided")
+            return False
+            
+        try:
+            if isinstance(devlist_data, str):
+                parsed_data = json.loads(devlist_data)
+            else:
+                parsed_data = devlist_data
+                
+            if not isinstance(parsed_data, dict):
+                LOGGER.error("Devlist data must be a dictionary")
+                return False
+                
+            self.devlist.update(parsed_data)
+        except (json.JSONDecodeError, TypeError) as ex:
+            LOGGER.error(f"Failed to parse devlist: {ex}")
+            return False
+        return True
+
+    def _load_mqtt_parameters(self, general_config):
+        """Load MQTT connection parameters with fallback to general config."""
+        try:
+            self.mqtt_server = (self.Parameters.get("mqtt_server") or 
+                               general_config.get("mqtt_server") or 'localhost')
+            self.mqtt_port = int(self.Parameters.get("mqtt_port") or 
+                                general_config.get("mqtt_port") or 1884)
+            self.mqtt_user = (self.Parameters.get("mqtt_user") or 
+                             general_config.get("mqtt_user") or 'admin')
+            self.mqtt_password = (self.Parameters.get("mqtt_password") or 
+                                 general_config.get("mqtt_password") or 'admin')
+        except (ValueError, TypeError) as ex:
+            LOGGER.error(f"Failed to parse MQTT parameters: {ex}")
+            return False
         return True
 
     
@@ -574,15 +621,15 @@ class Controller(Node):
             # should be keyed to `id` instead of `status_topic`
 
             
-    def _on_connect(self, mqttc, userdata, flags, rc):
+    def _on_connect(self, _mqttc, _userdata, _flags, rc):
         if rc == 0:
-            LOGGER.info("Poly MQTT Connected")
+            LOGGER.info(f"Poly MQTT Connected")
             self.mqtt_subscribe()
         else:
-            LOGGER.error("Poly MQTT Connect failed")
+            LOGGER.error(f"Poly MQTT Connect failed with rc:{rc}")
 
             
-    def _on_disconnect(self, mqttc, userdata, rc):
+    def _on_disconnect(self, _mqttc, _userdata, rc):
         if rc != 0:
             LOGGER.warning("Poly MQTT disconnected, trying to re-connect")
             try:
@@ -594,7 +641,7 @@ class Controller(Node):
             LOGGER.info("Poly MQTT graceful disconnection")
 
             
-    def _on_message(self, mqttc, userdata, message):
+    def _on_message(self, _mqttc, _userdata, message):
         if self.discovery_in == True:
             return
         topic = message.topic
