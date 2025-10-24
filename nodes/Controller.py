@@ -386,9 +386,12 @@ class Controller(Node):
         if "devices" not in dev_yaml:
             LOGGER.error(f"Manual discovery file {devfile_path} is missing devices section")
             return False
-            
-        self.devlist.update(dev_yaml["devices"])
-        general_config.update(dev_yaml.get("general", {}))
+        devices = dev_yaml.get("devices")
+        general = dev_yaml.get("general", {})
+        LOGGER.info(f"devices = {devices}")
+        LOGGER.info(f"general = {general}")
+        self.devlist.update(devices)
+        general_config.update(general)
         return True
 
     def _load_devlist_config(self):
