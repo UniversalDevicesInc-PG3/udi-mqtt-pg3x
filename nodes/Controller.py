@@ -8,7 +8,7 @@ Controller class
 # std libraries
 import json, yaml, time, logging
 from threading import Event, Condition
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 # external libraries
 from udi_interface import Node, LOGGER, Custom, LOG_HANDLER
@@ -21,23 +21,82 @@ pass
 # Nodes
 from nodes import *
 
- # Map device types to their respective node classes
-DEVICE_TYPE_TO_NODE_CLASS = {
-    'switch': MQSwitch,
-    'dimmer': MQDimmer,
-    'ifan': MQFan,
-    'sensor': MQSensor,
-    'flag': MQFlag,
-    'TempHumid': MQdht,
-    'Temp': MQds,
-    'TempHumidPress': MQbme,
-    'distance': MQhcsr,
-    'shellyflood': MQShellyFlood,
-    'analog': MQAnalog,
-    's31': MQs31,
-    'raw': MQraw,
-    'RGBW': MQRGBWstrip,
-    'ratgdo': MQratgdo,
+# Constants
+DEFAULT_MQTT_SERVER = "localhost"
+DEFAULT_MQTT_PORT = 1884
+DEFAULT_MQTT_USER = 'admin'
+DEFAULT_MQTT_PASSWORD = 'admin'
+DEVICE_ADDRESS_MAX_LENGTH = 14
+STATUS_TOPIC_PREFIX = 'stat/'
+TELE_TOPIC_PREFIX = 'tele/'
+RESULT_TOPIC_SUFFIX = '/RESULT'
+STATUS10_TOPIC_SUFFIX = '/STATUS10'
+
+# Comprehensive device configuration mapping
+DEVICE_CONFIG = {
+    'switch': {
+        'node_class': MQSwitch,
+    },
+    'dimmer': {
+        'node_class': MQDimmer,
+        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] + RESULT_TOPIC_SUFFIX]
+    },
+    'ifan': {
+        'node_class': MQFan,
+    },
+    'sensor': {
+        'node_class': MQSensor,
+    },
+    'flag': {
+        'node_class': MQFlag,
+    },
+    'TempHumid': {
+        'node_class': MQdht,
+        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
+                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
+    },
+    'Temp': {
+        'node_class': MQds,
+        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
+                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
+    },
+    'TempHumidPress': {
+        'node_class': MQbme,
+        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
+                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
+    },
+    'distance': {
+        'node_class': MQhcsr,
+    },
+    'shellyflood': {
+        'node_class': MQShellyFlood,
+        'status_topics': lambda dev: dev["status_topic"]  # Already a list
+    },
+    'analog': {
+        'node_class': MQAnalog,
+        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
+                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
+    },
+    's31': {
+        'node_class': MQs31,
+    },
+    'raw': {
+        'node_class': MQraw,
+    },
+    'RGBW': {
+        'node_class': MQRGBWstrip,
+    },
+    'ratgdo': {
+        'node_class': MQratgdo,
+        'status_topics': lambda dev: [
+            dev["status_topic"] + "/status/availability",
+            dev["status_topic"] + "/status/light",
+            dev["status_topic"] + "/status/door",
+            dev["status_topic"] + "/status/motion",
+            dev["status_topic"] + "/status/lock",
+            dev["status_topic"] + "/status/obstruction"
+        ]
+    }
 }
 
 
@@ -76,10 +135,10 @@ class Controller(Node):
         self.handler_typeddata_st = None
 
         # here are specific variables to this controller
-        self.mqtt_server = "localhost"
-        self.mqtt_port = 1884
-        self.mqtt_user = 'admin'
-        self.mqtt_password = 'admin'
+        self.mqtt_server = DEFAULT_MQTT_SERVER
+        self.mqtt_port = DEFAULT_MQTT_PORT
+        self.mqtt_user = DEFAULT_MQTT_USER
+        self.mqtt_password = DEFAULT_MQTT_PASSWORD
         self.devlist = {}
         # e.g. [{'id': 'topic1', 'type': 'switch', 'status_topic': 'stat/topic1/power',
         # 'cmd_topic': 'cmnd/topic1/power'}]
@@ -319,11 +378,9 @@ class Controller(Node):
         try:
             with open(devfile_path, 'r', encoding='utf-8') as file:
                 dev_yaml = yaml.safe_load(file)
-        except OSError as ex:
-            LOGGER.error(f"Failed to open {devfile_path}: {ex}")
-            return False
-        except yaml.YAMLError as ex:
-            LOGGER.error(f"Failed to parse {devfile_path} content: {ex}")
+        except (OSError, yaml.YAMLError) as ex:
+            error_type = "open" if isinstance(ex, OSError) else "parse"
+            LOGGER.error(f"Failed to {error_type} {devfile_path}: {ex}")
             return False
         
         if "devices" not in dev_yaml:
@@ -361,13 +418,13 @@ class Controller(Node):
         """Load MQTT connection parameters with fallback to general config."""
         try:
             self.mqtt_server = (self.Parameters.get("mqtt_server") or 
-                               general_config.get("mqtt_server") or 'localhost')
+                               general_config.get("mqtt_server") or DEFAULT_MQTT_SERVER)
             self.mqtt_port = int(self.Parameters.get("mqtt_port") or 
-                                general_config.get("mqtt_port") or 1884)
+                                general_config.get("mqtt_port") or DEFAULT_MQTT_PORT)
             self.mqtt_user = (self.Parameters.get("mqtt_user") or 
-                             general_config.get("mqtt_user") or 'admin')
+                             general_config.get("mqtt_user") or DEFAULT_MQTT_USER)
             self.mqtt_password = (self.Parameters.get("mqtt_password") or 
-                                 general_config.get("mqtt_password") or 'admin')
+                                 general_config.get("mqtt_password") or DEFAULT_MQTT_PASSWORD)
             self.status_prefix = (self.Parameters.get("status_prefix") or 
                                  general_config.get("status_prefix"))
             self.control_prefix = (self.Parameters.get("control_prefix") or 
@@ -467,136 +524,80 @@ class Controller(Node):
         LOGGER.info(f"discovery start")
         self.discovery_in = True
         for dev in self.devlist:
-            if (
-                    "id" not in dev
-                    or "status_topic" not in dev
-                    or "cmd_topic" not in dev
-                    or "type" not in dev
-            ):
-                LOGGER.error("Invalid device definition: {json.dumps(dev)}")
+            if not self._validate_device_definition(dev):
                 continue
-            if "name" in dev:
-                name = dev["name"]
-            else:
-                name = dev["id"]  # if there is no 'friendly name' use the ID instead
+                
+            name = dev.get("name", dev["id"])  # Use friendly name or fallback to ID
             address = Controller._format_device_address(dev)
+            
             if address not in nodes_existing:
-                if dev["type"] == "switch":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQSwitch(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-
-                elif dev['type'] == "dimmer":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQDimmer(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-                    dev['extra_status_topic'] = dev['status_topic'].rsplit('/', 1)[0] + '/RESULT'
-                    LOGGER.info(f'Adding {dev["extra_status_topic"]}')
-                    self._add_status_topics(dev, [dev['extra_status_topic']])
-                    LOGGER.info("ADDED {} {} /RESULT".format(dev['type'], name))
-
-                elif dev['type'] == "ifan":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQFan(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-
-                elif dev['type'] == "sensor":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQSensor(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-
-                elif dev['type'] == "flag":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQFlag(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-
-                elif dev['type'] == "TempHumid":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQdht(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-                    # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
-                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
-                    dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
-                    LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
-                    self._add_status_topics(dev, [dev['extra_status_topic']])
-
-                elif dev['type'] == "Temp":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQds(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-                    # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
-                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
-                    dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
-                    LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
-                    self._add_status_topics(dev, [dev['extra_status_topic']])
-
-                elif dev['type'] == "TempHumidPress":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQbme(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-                    # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
-                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
-                    dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
-                    LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
-                    self._add_status_topics(dev, [dev['extra_status_topic']])
-
-                elif dev['type'] == "distance":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQhcsr(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-
-                elif dev['type'] == "shellyflood":
-                    LOGGER.info(f"Adding {dev['type']} {name}")
-                    self.poly.addNode(MQShellyFlood(self.poly, self.address, address, name, dev))
-                    status_topics = dev["status_topic"]
-                    self._add_status_topics(dev, status_topics)
-
-                elif dev['type'] == "analog":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQAnalog(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-                    # parse status_topic to add 'STATUS10' MQTT message. Handles QUERY Response
-                    extra_status_topic = dev['status_topic'].rsplit('/', 1)[0] + '/STATUS10'
-                    dev['extra_status_topic'] = extra_status_topic.replace('tele/', 'stat/')
-                    LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {name}')
-                    self._add_status_topics(dev, [dev['extra_status_topic']])
-
-                elif dev['type'] == "s31":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQs31(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-
-                elif dev['type'] == "raw":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQraw(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-
-                elif dev['type'] == "RGBW":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQRGBWstrip(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
-
-                elif dev['type'] == "ratgdo":
-                    LOGGER.info(f"Adding {dev['type']}, {name}")
-                    self.poly.addNode(MQratgdo(self.poly, self.address, address, name, dev))
-                    status_topics_base = dev["status_topic"] + "/status/"
-                    status_topics = [status_topics_base + "availability",
-                                     status_topics_base + "light",
-                                     status_topics_base + "door",
-                                     status_topics_base + "motion",
-                                     status_topics_base + "lock",
-                                     status_topics_base + "obstruction"]
-                    self._add_status_topics(dev, status_topics)
-
-                else:
-                    LOGGER.error("Device type {} is not yet supported".format(dev['type']))
+                if not self._create_device_node(dev, name, address):
                     continue
                 self.wait_for_node_done()
             nodes_new.append(address)
         LOGGER.info("Done adding nodes.")
         LOGGER.debug(f'DEVLIST: {self.devlist}')
 
+    def _validate_device_definition(self, dev):
+        """Validate that device has required fields."""
+        required_fields = ["id", "status_topic", "cmd_topic", "type"]
+        if not all(field in dev for field in required_fields):
+            LOGGER.error(f"Invalid device definition: {json.dumps(dev)}")
+            return False
+        return True
+
+    def _create_device_node(self, dev, name, address):
+        """Create a device node using the device configuration."""
+        device_type = dev["type"]
         
+        # Check if device type is supported
+        if device_type not in DEVICE_CONFIG:
+            LOGGER.error(f"Device type {device_type} is not yet supported")
+            return False
+            
+        # Get the node class and create the node
+        device_config = DEVICE_CONFIG[device_type]
+        node_class = device_config["node_class"]
+        LOGGER.info(f"Adding {device_type}, {name}")
+        self.poly.addNode(node_class(self.poly, self.address, address, name, dev))
+        
+        # Add status topics using device configuration
+        self._add_device_status_topics(dev)
+        return True
+
+    def _add_device_status_topics(self, dev):
+        """Add status topics for a device based on its configuration."""
+        device_type = dev["type"]
+        device_config = DEVICE_CONFIG.get(device_type, {})
+        
+        # Get primary status topics
+        if "status_topics" in device_config:
+            # Custom status topics (like shellyflood, ratgdo)
+            status_topics = device_config["status_topics"](dev)
+            self._add_status_topics(dev, status_topics)
+        else:
+            # Default single status topic
+            self._add_status_topics(dev, [dev["status_topic"]])
+        
+        # Add extra status topics if configured
+        if "extra_status_topics" in device_config:
+            extra_topics = device_config["extra_status_topics"](dev)
+            # Store extra status topic in device for logging
+            if extra_topics:
+                dev['extra_status_topic'] = extra_topics[0]
+                LOGGER.info(f'Adding EXTRA {dev["extra_status_topic"]} for {dev.get("name", dev["id"])}')
+            self._add_status_topics(dev, extra_topics)
+
+        
+    def _add_status_topics(self, dev, status_topics: List[str]):
+        """Add status topics for a device and map them to the device address."""
+        device_address = Controller._format_device_address(dev)
+        
+        for status_topic in status_topics:
+            self.status_topics.append(status_topic)
+            self.status_topics_to_devices[status_topic] = device_address
+
+            
     def _cleanup_nodes(self, nodes_new, nodes_old):    
         # routine to remove nodes which exist but are not in devlist
         for node in nodes_old:
@@ -604,18 +605,11 @@ class Controller(Node):
                 LOGGER.info(f"need to delete node {node}")
                 self._remove_status_topics(node)
                 self.poly.delNode(node)
-        self.discovery_in = False
-        LOGGER.info(f"Done Cleanup")
+                self.discovery_in = False
+                LOGGER.info(f"Done Cleanup")
         return True
 
     
-    def _add_status_topics(self, dev, status_topics: List[str]):
-        for status_topic in status_topics:
-            self.status_topics.append(status_topic)
-            self.status_topics_to_devices[status_topic] = Controller._format_device_address(dev)
-            # should be keyed to `id` instead of `status_topic`
-
-            
     def _remove_status_topics(self, node):
         for status_topic in self.status_topics_to_devices:
             if self.status_topics_to_devices[status_topic] == self.poly.getNode(node):
@@ -639,14 +633,14 @@ class Controller(Node):
             try:
                 self.mqttc.reconnect()
             except Exception as ex:
-                LOGGER.error("Error connecting to Poly MQTT broker {}".format(ex))
+                LOGGER.error(f"Error connecting to Poly MQTT broker {ex}")
                 return False
         else:
             LOGGER.info("Poly MQTT graceful disconnection")
 
             
     def _on_message(self, _mqttc, _userdata, message):
-        if self.discovery_in == True:
+        if self.discovery_in:
             return
         topic = message.topic
         payload = message.payload.decode("utf-8")
@@ -657,57 +651,70 @@ class Controller(Node):
                 if 'StatusSNS' in data:
                     data = data['StatusSNS']
                     LOGGER.info(f'_StatusSNS data: {data}')
-                if 'ANALOG' in data.keys():
-                    LOGGER.info('ANALOG Payload = {}, Topic = {}'.format(payload, topic))
-                    for sensor in data['ANALOG']:
-                        LOGGER.info(f'_OA: {sensor}')
-                        self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(
-                            payload, topic)
-                for sensor in [sensor for sensor in data.keys() if 'DS18B20' in sensor]:
-                    LOGGER.info(f'_ODS: {sensor}')
-                    self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-                for sensor in [sensor for sensor in data.keys() if 'AM2301' in sensor]:
-                    LOGGER.info(f'_OAM: {sensor}')
-                    self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-                for sensor in [sensor for sensor in data.keys() if 'BME280' in sensor]:
-                    LOGGER.info(f'_OBM: {sensor}')
-                    self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(payload, topic)
-                else:  # if it's anything else, process as usual
+                # Process different sensor types
+                sensor_processors = {
+                    'ANALOG': '_OA',
+                    'DS18B20': '_ODS', 
+                    'AM2301': '_OAM',
+                    'BME280': '_OBM'
+                }
+                
+                processed = False
+                for sensor_type, log_prefix in sensor_processors.items():
+                    if sensor_type in data:
+                        if sensor_type == 'ANALOG':
+                            sensors = data[sensor_type]
+                        else:
+                            sensors = [key for key in data.keys() if sensor_type in key]
+                        
+                        for sensor in sensors:
+                            LOGGER.info(f'{log_prefix}: {sensor}')
+                            self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(
+                                payload, topic)
+                        processed = True
+                        break
+                
+                if not processed:  # if it's anything else, process as usual
                     LOGGER.info(f'_else: Payload = {payload}, Topic = {topic}')
                     self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
             except (json.decoder.JSONDecodeError, TypeError):  # if it's not a JSON, process as usual
                 LOGGER.info(f"_NotJSON: Payload = {payload}, Topic = {topic}")
                 self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
-            LOGGER.error("Failed to process message {}".format(ex))
+            LOGGER.error(f"Failed to process message {ex}")
 
             
-    def _dev_by_topic(self, topic):
+    def _dev_by_topic(self, topic: str) -> Optional[str]:
         LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
         return self.status_topics_to_devices.get(topic, None)
 
     
-    def _get_device_address_from_sensor_id(self, topic, sensor_type):
+    def _get_device_address_from_sensor_id(self, topic: str, sensor_type: str) -> Optional[str]:
         LOGGER.debug(f'GDA1: topic: {topic}  sensor_type: {sensor_type}')
         LOGGER.debug(f'GDA1b: devlist: {self.devlist}')
-        self.node_id = None
+        
+        topic_part = topic.rsplit('/')[1]
+        
+        # Look for device with matching sensor_id
         for device in self.devlist:
             LOGGER.debug(f'GDA2: device: {device}')
-            if 'sensor_id' in device:
-                if topic.rsplit('/')[1] in device['status_topic'] and sensor_type in device['sensor_id']:
-                    self.node_id = device['id'].lower().replace("_", "").replace("-", "_")[:14]
-                    LOGGER.debug(f'GDA2b: NODE_ID: {self.node_id}, {topic}, {sensor_type}')
-                    break
-        LOGGER.debug(f'GDA3: NODE_ID2: {self.node_id}')
-        if self.node_id == None:
-            self.node_id = self._dev_by_topic(topic)
-            LOGGER.debug(f'GDA4: revert to topic NODE_ID3: {self.node_id}')
-        return self.node_id
+            if ('sensor_id' in device and 
+                topic_part in device['status_topic'] and 
+                sensor_type in device['sensor_id']):
+                node_id = Controller._format_device_address(device)
+                LOGGER.debug(f'GDA2b: NODE_ID: {node_id}, {topic}, {sensor_type}')
+                return node_id
+        
+        # Fallback to topic-based lookup
+        LOGGER.debug(f'GDA3: NODE_ID2: None')
+        node_id = self._dev_by_topic(topic)
+        LOGGER.debug(f'GDA4: revert to topic NODE_ID3: {node_id}')
+        return node_id
 
     
     @staticmethod
     def _format_device_address(dev) -> str:
-        return dev["id"].lower().replace("_", "").replace("-", "_")[:14]
+        return dev["id"].lower().replace("_", "").replace("-", "_")[:DEVICE_ADDRESS_MAX_LENGTH]
 
     
     def mqtt_pub(self, topic, message):
@@ -724,13 +731,11 @@ class Controller(Node):
         for (topic, (result, mid)) in results:
             if result == 0:
                 LOGGER.info(
-                    "Subscribed to {} MID: {}, res: {}".format(topic, mid, result)
+                    f"Subscribed to {topic} MID: {mid}, res: {result}"
                 )
             else:
                 LOGGER.error(
-                    "Failed to subscribe {} MID: {}, res: {}".format(
-                        topic, mid, result
-                    )
+                    f"Failed to subscribe {topic} MID: {mid}, res: {result}"
                 )
         for node in self.poly.getNodes():
             if node != self.address:
