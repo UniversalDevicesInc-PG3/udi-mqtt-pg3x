@@ -504,8 +504,8 @@ class Controller(Node):
 
     def discover_cmd(self, command = None):
         """
-        Call node discovery here. Called from controller start method
-        and from DISCOVER command received from ISY.
+        Call node discovery here. Called from controller start method and
+        from DISCOVER command received from ISY.
         Calls checkParams, so can be used after update of devFile or config
         """
         LOGGER.info(command)
@@ -528,7 +528,8 @@ class Controller(Node):
 
     def _discover(self):
         """
-        Discover all nodes from the gateway.
+        Discover devices, add nodes, clean-up nodes.
+        Set-up arrays to track new & existing nodes, to allow clean-up.
         """
         success = False
         nodes_existing = self.poly.getNodes()
@@ -549,6 +550,9 @@ class Controller(Node):
 
 
     def _discover_nodes(self, nodes_existing, nodes_new):
+        """
+        Validate node configuration, set names & addresses, if not existing call create.
+        """
         LOGGER.info(f"discovery start")
         self.discovery_in = True
         for dev in self.devlist:
@@ -565,17 +569,23 @@ class Controller(Node):
             nodes_new.append(address)
         LOGGER.info("Done adding nodes.")
         LOGGER.debug(f'DEVLIST: {self.devlist}')
+        
 
     def _validate_device_definition(self, dev):
-        """Validate that device has required fields."""
+        """
+        Validate that device has required fields.
+        """
         required_fields = ["id", "status_topic", "cmd_topic", "type"]
         if not all(field in dev for field in required_fields):
             LOGGER.error(f"Invalid device definition: {json.dumps(dev)}")
             return False
         return True
+    
 
     def _create_device_node(self, dev, name, address):
-        """Create a device node using the device configuration."""
+        """
+        Create a device node using the validated device configuration.
+        """
         device_type = dev["type"]
         
         # Check if device type is supported
@@ -583,21 +593,30 @@ class Controller(Node):
             LOGGER.error(f"Device type {device_type} is not yet supported")
             return False
             
-        # Get the node class and create the node
+        # Get the node class
         device_config = DEVICE_CONFIG[device_type]
         node_class = device_config["node_class"]
-        LOGGER.info(f"Adding {device_type}, {name}")
-        self.poly.addNode(node_class(self.poly, self.address, address, name, dev))
         
         # Add status topics using device configuration
         self._add_device_status_topics(dev)
+
+        # and create the node
+        LOGGER.info(f"Adding {device_type}, {name}")
+        self.poly.addNode(node_class(self.poly, self.address, address, name, dev))
+        
         return True
 
+    
     def _add_device_status_topics(self, dev):
-        """Add status topics for a device based on its configuration."""
+        """
+        Add status topics for a device based on its configuration.
+        """
         device_type = dev["type"]
         device_config = DEVICE_CONFIG.get(device_type, {})
         
+        # Normalize the device's primary status topic
+        dev["status_topic"] = self._normalize_topic(dev["status_topic"], self.status_prefix)
+            
         # Get primary status topics
         if "status_topics" in device_config:
             # Custom status topics (like shellyflood, ratgdo)
@@ -618,13 +637,26 @@ class Controller(Node):
 
         
     def _add_status_topics(self, dev, status_topics: List[str]):
-        """Add status topics for a device and map them to the device address."""
+        """
+        Add status topics for a device and map them to the device address.
+        """
         device_address = Controller._format_device_address(dev)
         
-        for status_topic in status_topics:
+        for raw_topic in status_topics:
+            status_topic = self._normalize_topic(raw_topic, self.status_prefix)
             self.status_topics.append(status_topic)
             self.status_topics_to_devices[status_topic] = device_address
 
+    def _normalize_topic(self, topic: Optional[str], prefix: Optional[str]) -> str:
+        """
+        Replace leading '~' in a topic with the given prefix.
+        If topic or prefix is None, returns an empty string or the topic unchanged.
+        """
+        if topic is None:
+            return ""
+        if topic.startswith("~") and prefix is not None:
+            return prefix + topic[1:]
+        return topic
             
     def _cleanup_nodes(self, nodes_new, nodes_old):    
         # routine to remove nodes which exist but are not in devlist
