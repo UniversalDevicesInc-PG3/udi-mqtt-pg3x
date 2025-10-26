@@ -8,7 +8,7 @@ Controller class
 # std libraries
 import json, yaml, time, logging
 from threading import Event, Condition
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 # external libraries
 from udi_interface import Node, LOGGER, Custom, LOG_HANDLER
@@ -21,50 +21,36 @@ pass
 # Nodes
 from nodes import *
 
-# Constants
-DEFAULT_MQTT_SERVER = "localhost"
-DEFAULT_MQTT_PORT = 1884
-DEFAULT_MQTT_USER = 'admin'
-DEFAULT_MQTT_PASSWORD = 'admin'
-DEVICE_ADDRESS_MAX_LENGTH = 14
+DEFAULT_CONFIG = {
+    'mqtt_server': 'localhost',
+    'mqtt_port': 1884,
+    'mqtt_user': 'admin',
+    'mqtt_password': 'admin',
+    'status_prefix': None,
+    'control_prefix': None
+}
+
 STATUS_TOPIC_PREFIX = 'stat/'
 TELE_TOPIC_PREFIX = 'tele/'
 RESULT_TOPIC_SUFFIX = '/RESULT'
 STATUS10_TOPIC_SUFFIX = '/STATUS10'
+DEVICE_ADDRESS_MAX_LENGTH = 14
 
 # Comprehensive device configuration mapping
 DEVICE_CONFIG = {
-    'switch': {
-        'node_class': MQSwitch,
+    'switch': {'node_class': MQSwitch,},
+    'dimmer': {'node_class': MQDimmer,
+        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] + RESULT_TOPIC_SUFFIX]},
+    'ifan': {'node_class': MQFan,},
+    'sensor': {'node_class': MQSensor,},
+    'flag': {'node_class': MQFlag,},
+    'TempHumid': {'node_class': MQdht, 'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
+                                        STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
     },
-    'dimmer': {
-        'node_class': MQDimmer,
-        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] + RESULT_TOPIC_SUFFIX]
-    },
-    'ifan': {
-        'node_class': MQFan,
-    },
-    'sensor': {
-        'node_class': MQSensor,
-    },
-    'flag': {
-        'node_class': MQFlag,
-    },
-    'TempHumid': {
-        'node_class': MQdht,
-        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
-                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
-    },
-    'Temp': {
-        'node_class': MQds,
-        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
-                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
-    },
-    'TempHumidPress': {
-        'node_class': MQbme,
-        'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
-                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
-    },
+    'Temp': {'node_class': MQds, 'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
+                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]},
+    'TempHumidPress': {'node_class': MQbme, 'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
+                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]},
     'distance': {
         'node_class': MQhcsr,
     },
@@ -75,28 +61,16 @@ DEVICE_CONFIG = {
     'analog': {
         'node_class': MQAnalog,
         'extra_status_topics': lambda dev: [dev['status_topic'].rsplit('/', 1)[0] +
-                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]
-    },
-    's31': {
-        'node_class': MQs31,
-    },
-    'raw': {
-        'node_class': MQraw,
-    },
-    'RGBW': {
-        'node_class': MQRGBWstrip,
-    },
-    'ratgdo': {
-        'node_class': MQratgdo,
-        'status_topics': lambda dev: [
-            dev["status_topic"] + "/status/availability",
-            dev["status_topic"] + "/status/light",
-            dev["status_topic"] + "/status/door",
-            dev["status_topic"] + "/status/motion",
-            dev["status_topic"] + "/status/lock",
-            dev["status_topic"] + "/status/obstruction"
-        ]
-    }
+                                       STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)]},
+    's31': {'node_class': MQs31,},
+    'raw': {'node_class': MQraw,},
+    'RGBW': {'node_class': MQRGBWstrip,},
+    'ratgdo': {'node_class': MQratgdo, 'status_topics': lambda dev: [dev["status_topic"] + "/status/availability",
+                                                                dev["status_topic"] + "/status/light",
+                                                                dev["status_topic"] + "/status/door",
+                                                                dev["status_topic"] + "/status/motion",
+                                                                dev["status_topic"] + "/status/lock",
+                                                                dev["status_topic"] + "/status/obstruction"]}
 }
 
 
@@ -134,23 +108,19 @@ class Controller(Node):
         self.handler_typedparams_st = None
         self.handler_typeddata_st = None
 
-        # here are specific variables to this controller
-        self.mqtt_server = DEFAULT_MQTT_SERVER
-        self.mqtt_port = DEFAULT_MQTT_PORT
-        self.mqtt_user = DEFAULT_MQTT_USER
-        self.mqtt_password = DEFAULT_MQTT_PASSWORD
-        self.devlist = {}
+        self.devlist = []       
         # e.g. [{'id': 'topic1', 'type': 'switch', 'status_topic': 'stat/topic1/power',
         # 'cmd_topic': 'cmnd/topic1/power'}]
         self.status_topics = []
+        
         # Maps to device IDs
         self.status_topics_to_devices: Dict[str, str] = {}
         self.valid_configuration = False
 
         # Create data storage classes
-        self.Notices                = Custom(poly, 'notices')
+        self.Notices         = Custom(poly, 'notices')
         self.Parameters      = Custom(poly, 'customparams')
-        self.Data                   = Custom(poly, 'customdata')
+        self.Data            = Custom(poly, 'customdata')
         self.TypedParameters = Custom(poly, 'customtypedparams')
         self.TypedData       = Custom(poly, 'customtypeddata')
 
@@ -248,6 +218,8 @@ class Controller(Node):
         self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
 
         try:
+            assert self.mqtt_server is not None, "mqtt_server must be set"
+            assert self.mqtt_port is not None, "mqtt_port must be set"
             self.mqttc.connect(self.mqtt_server, self.mqtt_port, keepalive=10)
             self.mqttc.loop_start()
         except Exception as ex:
@@ -346,11 +318,10 @@ class Controller(Node):
 
     def checkParams(self):
         """Load and validate configuration parameters from devfile or devlist."""
-        general_config = {}
         
         # Load device configuration from YAML file
         if self.Parameters.get("devfile"):
-            if not self._load_devfile_config(general_config):
+            if not self._load_devfile_config():
                 return False
         
         # Load device configuration from JSON string
@@ -362,13 +333,13 @@ class Controller(Node):
             return False
 
         # Load MQTT parameters with fallback to general config
-        if not self._load_mqtt_parameters(general_config):
+        if not self._load_mqtt_parameters():
             return False
         # Success
         return True
     
 
-    def _load_devfile_config(self, general_config):
+    def _load_devfile_config(self):
         """Load device configuration from YAML file."""
         devfile_path = self.Parameters["devfile"]
         if not devfile_path or not isinstance(devfile_path, str):
@@ -387,12 +358,17 @@ class Controller(Node):
             LOGGER.error(f"Manual discovery file {devfile_path} is missing devices section")
             return False
         devices = dev_yaml.get("devices")
-        general = dev_yaml.get("general", {})
+        general = dev_yaml.get("general", [])
         LOGGER.info(f"devices = {devices}")
         LOGGER.info(f"general = {general}")
-        self.devlist.update(devices)
-        general_config.update(general)
+        
+        # initial device list is based on devfile items
+        self.devlist = devices
+
+        # these are the general configuration items based on devfile
+        self.general = {k: v for d in general for k, v in d.items()}
         return True
+    
 
     def _load_devlist_config(self):
         """Load device configuration from JSON string."""
@@ -410,32 +386,81 @@ class Controller(Node):
             if not isinstance(parsed_data, dict):
                 LOGGER.error("Devlist data must be a dictionary")
                 return False
-                
-            self.devlist.update(parsed_data)
+
+            # devlist items take precidence over devfile
+            self.upsert_by_id(self.devlist, parsed_data)
         except (json.JSONDecodeError, TypeError) as ex:
             LOGGER.error(f"Failed to parse devlist: {ex}")
             return False
         return True
+    
 
-    def _load_mqtt_parameters(self, general_config):
-        """Load MQTT connection parameters with fallback to general config."""
+    def upsert_by_id(self, config_list, new_entry):
+        """
+        Update list of devices if same id  or append if does not exist.
+        """
+        new_id = new_entry.get('id')
+        for i, entry in enumerate(config_list):
+            if entry.get('id') == new_id:
+                config_list[i] = new_entry  # Replace
+                return
+        config_list.append(new_entry)  # Append if not found
+
+
+    def _load_mqtt_parameters(self) -> bool:
+        """
+        Load MQTT connection parameters with fallback taken in order
+        of Parameter list, then devfile, and finally defaults.
+        """
         try:
-            self.mqtt_server = (self.Parameters.get("mqtt_server") or 
-                               general_config.get("mqtt_server") or DEFAULT_MQTT_SERVER)
-            self.mqtt_port = int(self.Parameters.get("mqtt_port") or 
-                                general_config.get("mqtt_port") or DEFAULT_MQTT_PORT)
-            self.mqtt_user = (self.Parameters.get("mqtt_user") or 
-                             general_config.get("mqtt_user") or DEFAULT_MQTT_USER)
-            self.mqtt_password = (self.Parameters.get("mqtt_password") or 
-                                 general_config.get("mqtt_password") or DEFAULT_MQTT_PASSWORD)
-            self.status_prefix = (self.Parameters.get("status_prefix") or 
-                                 general_config.get("status_prefix"))
-            self.control_prefix = (self.Parameters.get("control_prefix") or 
-                                 general_config.get("control_prefix"))
+            self.mqtt_server = self._get_str(
+                self.Parameters.get("mqtt_server"),
+                self.general.get("mqtt_server"),
+                DEFAULT_CONFIG.get("mqtt_server")
+            )
+            self.mqtt_port = self._get_int(
+                self.Parameters.get("mqtt_port"),
+                self.general.get("mqtt_port"),
+                DEFAULT_CONFIG.get("mqtt_port")
+            )
+            
+            self.mqtt_user = self._get_str(
+                self.Parameters.get("mqtt_user"),
+                self.general.get("mqtt_user"),
+                DEFAULT_CONFIG.get("mqtt_user")
+            )
+            self.mqtt_password = self._get_str(
+                self.Parameters.get("mqtt_password"),
+                self.general.get("mqtt_password"),
+                DEFAULT_CONFIG.get("mqtt_password")
+            )
+            self.status_prefix = self._get_str(
+                self.Parameters.get("status_prefix"),
+                self.general.get("status_prefix")
+            )
+            self.control_prefix = self._get_str(
+                self.Parameters.get("control_prefix"),
+                self.general.get("control_prefix")
+            )
         except (ValueError, TypeError) as ex:
             LOGGER.error(f"Failed to parse MQTT parameters: {ex}")
             return False
         return True
+
+    
+    def _get_str(*args: Optional[Any]) -> Optional[str]:
+        for val in args:
+            if isinstance(val, str):
+                return val
+        return None
+
+    def _get_int(*args: Optional[Any]) -> Optional[int]:
+        for val in args:
+            if isinstance(val, int):
+                return val
+            if isinstance(val, str) and val.isdigit():
+                return int(val)
+        return None
 
     
     def handleLevelChange(self, level):
