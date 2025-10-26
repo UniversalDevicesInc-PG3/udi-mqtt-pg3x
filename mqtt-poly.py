@@ -23,6 +23,7 @@ VERSION = '0.50.0'
 0.50.0
 INPROCESS improve commenting for readability
 INPROCESS rewrite for Pythonic maintainability
+DONE add user defined default status_prefix & cmd_prefix
 
 0.40.3
 DONE: fixed typos in POLYGLOT_CONFIG.md

@@ -13,19 +13,26 @@ If you are on Polisy or running Polyglot on an RPi, see post #1 in [this thread]
 
 ### Custom Parameters
 
-You will need to define the following custom parameters:
+You will need to define the following custom parameters in Parameters OR in devfile:
 
 ```
 ## ONE OF THE BELOW IS REQUIRED (see below for example of each)
+
+You can mix and match, Parameters & devlist will add to or overwrite devfile.
+
 devlist - JSON array, note format & space between '[' and '{'
     or
 devfile - name of yaml file stored on EISY
 
-## THESE ARE REQUIRED ONLY IF USING AN EXTERNAL SERVER OR YOU CHANGED LOCAL SETTINGS
+## THESE ARE REQUIRED ONLY IF USING AN EXTERNAL SERVER OR YOU CHANGED DEFAULT SETTINGS
 mqtt_server   - (default = 'localhost')
 mqtt_port     - (default = 1884)
 mqtt_user     - (default = admin)
 mqtt_password - (default = admin)
+
+## OPTIONAL TOPIC PREFIX PARAMS WILL REPLACE TILD ~ AT START OF TOPICS 
+status_prefix - (default = None)
+cmd_prefix - (default = None)
 ```
 #
 #### `devlist example` - JSON list of devices & status/command topics note format & space between '[' and '{'
@@ -42,42 +49,51 @@ mqtt_password - (default = admin)
 #### `devfile example` - YAML file stored on EISY of devices & topics
 
 ```yaml
+general:
+
+- mqtt_server: "localhost"
+- mqtt_port: 1884
+- mqtt_user: "admin"
+- mqtt_password: "admin"
+- status_prefix: "tele/Wemos32" # any status_topic starting with ~ is replaced
+- cmd_prefix: "cmnd/Wemos32/power" # any cmd_topic starting with ~ is replaced
+
 devices:
 - id: "WemosA1"
   name: "Wemos A1"
   type: "analog"
   sensor_id: "A1"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/power"
+  status_topic: "~/SENSOR"
+  cmd_topic: "~/"
 - id: "WemosR2"
   name: "Wemos AR"
   type: "analog"
   sensor_id: "Range2"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/power"
+  status_topic: "~/SENSOR"
+  cmd_topic: "~/"
 - id: "WemosT1"
   name: "Wemos T1"
   type: "Temp"
   sensor_id: "DS18B20-1"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/power"
+  status_topic: "~/SENSOR"
+  cmd_topic: "~/"
 - id: "WemosT2"
   name: "Wemos T2"
   type: "Temp"
   sensor_id: "DS18B20-2"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/power"
+  status_topic: "~/SENSOR"
+  cmd_topic: "~/"
 - id: "WemosTH"
   name: "Wemos TH"
   type: "TempHumid"
   sensor_id: "AM2301"
-  status_topic: "tele/Wemos32/SENSOR"
-  cmd_topic: "cmnd/Wemos32/power"
+  status_topic: "~/SENSOR"
+  cmd_topic: "~/"
 - id: "WemosSW"
   name: "Wemos SW"
   type: "switch"
-  status_topic: "stat/Wemos32/POWER"
-  cmd_topic: "cmnd/Wemos32/power"
+  status_topic: "~/POWER"
+  cmd_topic: "~/"
 ```
 Note the topic (Wemos32) is the same for all sensors on the same device. The 'id' and 'name' can be different
 

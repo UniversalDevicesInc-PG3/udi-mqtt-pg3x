@@ -27,7 +27,7 @@ DEFAULT_CONFIG = {
     'mqtt_user': 'admin',
     'mqtt_password': 'admin',
     'status_prefix': None,
-    'control_prefix': None
+    'cmd_prefix': None
 }
 
 STATUS_TOPIC_PREFIX = 'stat/'
@@ -438,9 +438,9 @@ class Controller(Node):
                 self.Parameters.get("status_prefix"),
                 self.general.get("status_prefix")
             )
-            self.control_prefix = self._get_str(
-                self.Parameters.get("control_prefix"),
-                self.general.get("control_prefix")
+            self.cmd_prefix = self._get_str(
+                self.Parameters.get("cmd_prefix"),
+                self.general.get("cmd_prefix")
             )
         except (ValueError, TypeError) as ex:
             LOGGER.error(f"Failed to parse MQTT parameters: {ex}")
@@ -601,7 +601,7 @@ class Controller(Node):
         dev["status_topic"] = self._normalize_topic(dev["status_topic"], self.status_prefix)
 
         # Normalize the device's control topic
-        dev["control_topic"] = self._normalize_topic(dev["control_topic"], self.control_prefix)
+        dev["cmd_topic"] = self._normalize_topic(dev["cmd_topic"], self.cmd_prefix)
         
         # Add status topics using device configuration
         self._add_device_status_topics(dev)
