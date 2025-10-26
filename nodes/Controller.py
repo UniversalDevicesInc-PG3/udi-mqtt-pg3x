@@ -597,6 +597,12 @@ class Controller(Node):
         device_config = DEVICE_CONFIG[device_type]
         node_class = device_config["node_class"]
         
+        # Normalize the device's primary status topic
+        dev["status_topic"] = self._normalize_topic(dev["status_topic"], self.status_prefix)
+
+        # Normalize the device's control topic
+        dev["control_topic"] = self._normalize_topic(dev["control_topic"], self.control_prefix)
+        
         # Add status topics using device configuration
         self._add_device_status_topics(dev)
 
@@ -614,9 +620,6 @@ class Controller(Node):
         device_type = dev["type"]
         device_config = DEVICE_CONFIG.get(device_type, {})
         
-        # Normalize the device's primary status topic
-        dev["status_topic"] = self._normalize_topic(dev["status_topic"], self.status_prefix)
-            
         # Get primary status topics
         if "status_topics" in device_config:
             # Custom status topics (like shellyflood, ratgdo)
