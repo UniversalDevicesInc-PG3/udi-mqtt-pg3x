@@ -42,6 +42,14 @@ RESULT_TOPIC_SUFFIX = '/RESULT'
 STATUS10_TOPIC_SUFFIX = '/STATUS10'
 DEVICE_ADDRESS_MAX_LENGTH = 14
 
+# Sensor processor mapping for MQTT message processing
+SENSOR_PROCESSORS = {
+    'ANALOG': '_OA',
+    'DS18B20': '_ODS', 
+    'AM2301': '_OAM',
+    'BME280': '_OBM'
+}
+
 # Comprehensive device configuration mapping
 DEVICE_CONFIG = {
     'switch': {'node_class': MQSwitch,},
@@ -1098,46 +1106,127 @@ class Controller(Node):
         """
         if self.discovery_in:
             return
+            
         topic = message.topic
         payload = message.payload.decode("utf-8")
-        LOGGER.info(f"Received _on_message {payload} from {topic}")
+        LOGGER.info(f"Received message from {topic}: {payload}")
+        
         try:
-            try:
-                data = json.loads(payload)
-                if 'StatusSNS' in data:
-                    data = data['StatusSNS']
-                    LOGGER.info(f'_StatusSNS data: {data}')
-                # Process different sensor types
-                sensor_processors = {
-                    'ANALOG': '_OA',
-                    'DS18B20': '_ODS', 
-                    'AM2301': '_OAM',
-                    'BME280': '_OBM'
-                }
-                
-                processed = False
-                for sensor_type, log_prefix in sensor_processors.items():
-                    if sensor_type in data:
-                        if sensor_type == 'ANALOG':
-                            sensors = data[sensor_type]
-                        else:
-                            sensors = [key for key in data.keys() if sensor_type in key]
-                        
-                        for sensor in sensors:
-                            LOGGER.info(f'{log_prefix}: {sensor}')
-                            self.poly.getNode(self._get_device_address_from_sensor_id(topic, sensor)).updateInfo(
-                                payload, topic)
-                        processed = True
-                        break
-                
-                if not processed:  # if it's anything else, process as usual
-                    LOGGER.info(f'_else: Payload = {payload}, Topic = {topic}')
-                    self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
-            except (json.decoder.JSONDecodeError, TypeError):  # if it's not a JSON, process as usual
-                LOGGER.info(f"_NotJSON: Payload = {payload}, Topic = {topic}")
-                self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
+            # Try to parse as JSON first
+            data = self._parse_json_payload(payload)
+            if data is not None:
+                self._process_json_message(topic, payload, data)
+            else:
+                self._process_plain_text_message(topic, payload)
         except Exception as ex:
-            LOGGER.error(f"Failed to process message {ex}")
+            LOGGER.error(f"Failed to process message from {topic}: {ex}")
+
+            
+    def _parse_json_payload(self, payload: str) -> Optional[Dict[str, Any]]:
+        """Parse JSON payload with proper error handling.
+        
+        Args:
+            payload (str): Raw message payload to parse.
+            
+        Returns:
+            Optional[Dict[str, Any]]: Parsed JSON data or None if not JSON.
+        """
+        try:
+            return json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+        
+    def _process_json_message(self, topic: str, payload: str, data: Dict[str, Any]) -> None:
+        """Process JSON-formatted MQTT message.
+        
+        Args:
+            topic (str): MQTT topic of the message.
+            payload (str): Raw message payload.
+            data (Dict[str, Any]): Parsed JSON data.
+        """
+        # Extract StatusSNS data if present
+        if 'StatusSNS' in data:
+            data = data['StatusSNS']
+            LOGGER.debug(f'StatusSNS data: {data}')
+        
+        # Try to process as sensor data first
+        if self._process_sensor_data(topic, payload, data):
+            return
+        
+        # Process as regular JSON message
+        LOGGER.debug(f'Processing JSON message: {payload}')
+        self._route_message_to_device(topic, payload)
+
+        
+    def _process_sensor_data(self, topic: str, payload: str, data: Dict[str, Any]) -> bool:
+        """Process sensor-specific data from JSON message.
+        
+        Args:
+            topic (str): MQTT topic of the message.
+            payload (str): Raw message payload.
+            data (Dict[str, Any]): Parsed JSON data.
+            
+        Returns:
+            bool: True if sensor data was processed, False otherwise.
+        """
+        for sensor_type, log_prefix in SENSOR_PROCESSORS.items():
+            if sensor_type in data:
+                sensors = self._extract_sensors(data, sensor_type)
+                for sensor in sensors:
+                    LOGGER.debug(f'{log_prefix}: {sensor}')
+                    self._route_message_to_device(topic, payload, sensor)
+                return True
+        return False
+    
+    
+    def _extract_sensors(self, data: Dict[str, Any], sensor_type: str) -> List[str]:
+        """Extract sensor names from data based on sensor type.
+        
+        Args:
+            data (Dict[str, Any]): JSON data containing sensor information.
+            sensor_type (str): Type of sensor to extract.
+            
+        Returns:
+            List[str]: List of sensor names.
+        """
+        if sensor_type == 'ANALOG':
+            return data[sensor_type] if isinstance(data[sensor_type], list) else [data[sensor_type]]
+        else:
+            return [key for key in data.keys() if sensor_type in key]
+
+        
+    def _process_plain_text_message(self, topic: str, payload: str) -> None:
+        """Process plain text MQTT message.
+        
+        Args:
+            topic (str): MQTT topic of the message.
+            payload (str): Raw message payload.
+        """
+        LOGGER.debug(f'Processing plain text message: {payload}')
+        self._route_message_to_device(topic, payload)
+
+        
+    def _route_message_to_device(self, topic: str, payload: str, sensor: Optional[str] = None) -> None:
+        """Route message to the appropriate device node.
+        
+        Args:
+            topic (str): MQTT topic of the message.
+            payload (str): Raw message payload.
+            sensor (Optional[str]): Sensor name for sensor-specific routing.
+        """
+        try:
+            if sensor:
+                device_address = self._get_device_address_from_sensor_id(topic, sensor)
+            else:
+                device_address = self._dev_by_topic(topic)
+            
+            if device_address:
+                self.poly.getNode(device_address).updateInfo(payload, topic)
+            else:
+                LOGGER.warning(f"No device found for topic: {topic}")
+        except Exception as ex:
+            LOGGER.error(f"Failed to route message to device: {ex}")
 
             
     def _dev_by_topic(self, topic: str) -> Optional[str]:
