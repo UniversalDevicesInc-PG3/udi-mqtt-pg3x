@@ -1,8 +1,14 @@
-""" mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
+"""MQTT Polyglot NodeServer for EISY/Polisy.
 
-(C) 2025 Stephen Jenkins
+This module provides the Controller class for the mqtt-poly-pg3x NodeServer,
+which enables communication between MQTT devices and the EISY/Polisy home
+automation system through the Polyglot interface.
 
-Controller class
+The Controller manages MQTT connections, device discovery, and acts as the
+central coordinator for all MQTT device nodes in the system.
+
+Author: Stephen Jenkins
+Copyright: (C) 2025 Stephen Jenkins
 """
 
 # std libraries
@@ -75,16 +81,56 @@ DEVICE_CONFIG = {
 
 
 class Controller(Node):
+    """Controller class for MQTT Polyglot NodeServer.
+    
+    The Controller serves as the main coordinator for the MQTT NodeServer,
+    managing device discovery, MQTT connections, and communication between
+    MQTT devices and the EISY/Polisy system.
+    
+    Attributes:
+        id (str): Unique identifier for the controller node ('mqctrl').
+        hb (int): Heartbeat counter for monitoring controller status.
+        numNodes (int): Number of discovered device nodes.
+        n_queue (list): Queue for tracking node creation completion.
+        queue_condition (Condition): Threading condition for node queue synchronization.
+        ready_event (Event): Event signaling when controller is ready for operation.
+        all_handlers_st_event (Event): Event signaling when all handlers are complete.
+        stop_sse_client_event (Event): Event for stopping SSE client operations.
+        discovery_in (bool): Flag indicating if discovery is currently in progress.
+        devlist (list): List of configured MQTT devices.
+        status_topics (list): List of MQTT status topics to subscribe to.
+        status_topics_to_devices (Dict[str, str]): Mapping of status topics to device addresses.
+        valid_configuration (bool): Flag indicating if configuration is valid.
+        mqttc (Client): MQTT client instance for communication.
+        mqtt_server (str): MQTT broker server address.
+        mqtt_port (int): MQTT broker port number.
+        mqtt_user (str): MQTT broker username.
+        mqtt_password (str): MQTT broker password.
+        status_prefix (str): Prefix for MQTT status topics.
+        cmd_prefix (str): Prefix for MQTT command topics.
+        
+    Example:
+        The Controller is typically instantiated by the Polyglot interface
+        and manages the entire MQTT device ecosystem.
+    """
     id = 'mqctrl'
 
     def __init__(self, poly, primary, address, name):
-        """
-        super
-        self definitions
-        data storage classes
-        subscribes
-        ready
-        we exist!
+        """Initialize the Controller node.
+        
+        Sets up the controller with all necessary attributes, data storage classes,
+        event subscriptions, and initializes the node in the Polyglot system.
+        
+        Args:
+            poly: Polyglot interface instance for communication with EISY/Polisy.
+            primary: Primary node address (typically the controller itself).
+            address: Unique address for this controller node.
+            name: Human-readable name for the controller node.
+            
+        Note:
+            This method initializes all internal data structures, sets up event
+            handlers, creates data storage classes, and signals readiness to
+            the Polyglot interface.
         """
         super().__init__(poly, primary, address, name)
 
@@ -145,8 +191,27 @@ class Controller(Node):
         
 
     def start(self):
-        """
-        Called by handler during startup.
+        """Initialize and start the MQTT NodeServer.
+        
+        This method is called by the Polyglot handler during startup. It performs
+        the complete initialization sequence including profile updates, parameter
+        loading, device discovery, and MQTT connection establishment.
+        
+        The startup process includes:
+        1. Clearing notices and setting initial status
+        2. Updating the ISY profile if necessary
+        3. Setting custom parameters documentation
+        4. Waiting for all handlers to complete initialization
+        5. Performing device discovery
+        6. Establishing MQTT connection
+        7. Signaling readiness to child nodes
+        
+        Returns:
+            None
+            
+        Note:
+            If any step fails, the controller will set error status and display
+            appropriate error messages in the notices.
         """
         LOGGER.info(f"Virtual Devices PG3 NodeServer {self.poly.serverdata['version']}")
         self.Notices.clear()
@@ -210,9 +275,18 @@ class Controller(Node):
 
         
     def _mqtt_start(self):
-        """
-        Initialize and connect to the user's MQTT server.
-        Config based on Parameters, devfile, defaults; in that order.
+        """Initialize and connect to the MQTT broker.
+        
+        Creates an MQTT client, configures connection parameters, and establishes
+        a connection to the user's MQTT server. Configuration is loaded from
+        Parameters, devfile, and defaults in that order of precedence.
+        
+        Returns:
+            bool: True if connection successful, False otherwise.
+            
+        Note:
+            This method will retry connection attempts and log appropriate
+            error messages if the connection fails.
         """
         self.mqttc = Client(CallbackAPIVersion.VERSION1)
         self.mqttc.on_connect = self._on_connect
@@ -242,12 +316,24 @@ class Controller(Node):
 
 
     def node_queue(self, data):
-        '''
-        node_queue() and wait_for_node_event() create a simple way to wait
-        for a node to be created.  The nodeAdd() API call is asynchronous and
-        will return before the node is fully created. Using this, we can wait
-        until it is fully created before we try to use it.
-        '''
+        """Handle node creation completion notification.
+        
+        This method is called when a node has been successfully created by the
+        Polyglot interface. It adds the node address to the internal queue
+        and notifies waiting threads that the node creation is complete.
+        
+        The node_queue() and wait_for_node_done() methods work together to
+        provide a simple synchronization mechanism for node creation. Since
+        the addNode() API call is asynchronous and returns before the node
+        is fully created, this allows the controller to wait until the node
+        is ready before attempting to use it.
+        
+        Args:
+            data (dict): Event data containing the node address.
+            
+        Returns:
+            None
+        """
         address = data.get('address')
         if address:
             with self.queue_condition:
@@ -255,13 +341,38 @@ class Controller(Node):
                 self.queue_condition.notify()
 
     def wait_for_node_done(self):
+        """Wait for a node creation to complete.
+        
+        This method blocks until a node has been successfully created and
+        added to the internal queue. It works in conjunction with node_queue()
+        to provide synchronization for asynchronous node creation.
+        
+        Returns:
+            None
+            
+        Note:
+            This method will timeout after 0.2 seconds if no node creation
+            completion is received, allowing for non-blocking operation.
+        """
         with self.queue_condition:
             while not self.n_queue:
                 self.queue_condition.wait(timeout = 0.2)
             self.n_queue.pop()
         
 
-    def dataHandler(self,data):
+    def dataHandler(self, data):
+        """Handle custom data loading from Polyglot.
+        
+        This method is called when custom data is received from the Polyglot
+        interface. It loads the data into the internal Data storage and
+        signals completion of the data handler.
+        
+        Args:
+            data: Custom data from Polyglot interface, can be None.
+            
+        Returns:
+            None
+        """
         LOGGER.debug(f'enter: Loading data {data}')
         if data is None:
             LOGGER.warning("No custom data")
@@ -272,9 +383,18 @@ class Controller(Node):
 
 
     def parameterHandler(self, params):
-        """
-        Called via the CUSTOMPARAMS event. When the user enters or
-        updates Custom Parameters via the dashboard.
+        """Handle custom parameters from Polyglot dashboard.
+        
+        This method is called via the CUSTOMPARAMS event when the user enters
+        or updates custom parameters through the Polyglot dashboard. It loads
+        the parameters into the internal Parameters storage and signals
+        completion of the parameter handler.
+        
+        Args:
+            params: Custom parameters from Polyglot interface.
+            
+        Returns:
+            None
         """
         LOGGER.info('parmHandler: Loading parameters now')
         self.Parameters.load(params)
@@ -283,9 +403,17 @@ class Controller(Node):
 
         
     def typedParameterHandler(self, params):
-        """
-        Called via the CUSTOMTYPEDPARAMS event. This event is sent When
-        the Custom Typed Parameters are created.
+        """Handle custom typed parameters from Polyglot.
+        
+        This method is called via the CUSTOMTYPEDPARAMS event when custom
+        typed parameters are created. It loads the typed parameters into
+        the internal TypedParameters storage and signals completion.
+        
+        Args:
+            params: Custom typed parameters from Polyglot interface.
+            
+        Returns:
+            None
         """
         LOGGER.debug('Loading typed parameters now')
         self.TypedParameters.load(params)
@@ -295,10 +423,18 @@ class Controller(Node):
 
 
     def typedDataHandler(self, data):
-        """
-        Called via the CUSTOMTYPEDDATA event. This event is sent when
-        the user enters or updates Custom Typed Parameters via the dashboard.
-        'params' will be the full list of parameters entered by the user.
+        """Handle custom typed data from Polyglot dashboard.
+        
+        This method is called via the CUSTOMTYPEDDATA event when the user
+        enters or updates custom typed parameters through the Polyglot dashboard.
+        It loads the typed data into the internal TypedData storage and signals
+        completion of the typed data handler.
+        
+        Args:
+            data: Custom typed data from Polyglot interface, can be None.
+            
+        Returns:
+            None
         """
         LOGGER.debug('Loading typed data now')
         if data is None:
@@ -311,8 +447,15 @@ class Controller(Node):
 
 
     def check_handlers(self):
-        """
-        Once all start-up parameters are done then set event.
+        """Check if all startup handlers have completed.
+        
+        This method verifies that all required startup handlers (parameters,
+        data, typed parameters, and typed data) have completed their
+        initialization. Once all handlers are complete, it sets the
+        all_handlers_st_event to signal that startup can proceed.
+        
+        Returns:
+            None
         """
         if (self.handler_params_st and self.handler_data_st and
             self.handler_typedparams_st and self.handler_typeddata_st):
@@ -320,9 +463,18 @@ class Controller(Node):
 
 
     def checkParams(self):
-        """
-        Load and validate configuration parameters from devfile or devlist.
-        devlist will update / overwrite config values.
+        """Load and validate configuration parameters.
+        
+        Loads device configuration from either a YAML devfile or JSON devlist
+        parameter. The devlist configuration takes precedence over devfile
+        values and will update or overwrite existing configuration.
+        
+        Returns:
+            bool: True if configuration loaded successfully, False otherwise.
+            
+        Note:
+            At least one of devfile or devlist must be configured for
+            successful operation.
         """
         
         # Load device configuration from YAML file
@@ -346,10 +498,19 @@ class Controller(Node):
     
 
     def _load_devfile_config(self):
-        """
-        Load device configuration from YAML file.
-        general and devices main sections.
-        Convert general section from array of dict to flat dict.
+        """Load device configuration from YAML file.
+        
+        Loads device configuration from a YAML file specified in the devfile
+        parameter. The YAML file should contain 'general' and 'devices' sections.
+        The general section is converted from an array of dictionaries to a
+        flat dictionary for easier access.
+        
+        Returns:
+            bool: True if configuration loaded successfully, False otherwise.
+            
+        Raises:
+            OSError: If the file cannot be opened.
+            yaml.YAMLError: If the YAML file cannot be parsed.
         """
         devfile_path = self.Parameters["devfile"]
         if not devfile_path or not isinstance(devfile_path, str):
@@ -381,9 +542,18 @@ class Controller(Node):
     
 
     def _load_devlist_config(self):
-        """
-        Load device configuration from JSON string.
-        Update or add to devlist, initiated in devfile.
+        """Load device configuration from JSON string.
+        
+        Loads device configuration from a JSON string specified in the devlist
+        parameter. This configuration will update or add to the existing devlist
+        that was initially loaded from the devfile.
+        
+        Returns:
+            bool: True if configuration loaded successfully, False otherwise.
+            
+        Raises:
+            json.JSONDecodeError: If the JSON string cannot be parsed.
+            TypeError: If the data type is invalid.
         """
         devlist_data = self.Parameters["devlist"]
         if not devlist_data:
@@ -409,8 +579,17 @@ class Controller(Node):
     
 
     def upsert_by_id(self, config_list, new_entry):
-        """
-        Update list of devices if same id  or append if does not exist.
+        """Update or insert device configuration by ID.
+        
+        Updates an existing device configuration in the list if a device with
+        the same ID exists, or appends the new entry if no matching ID is found.
+        
+        Args:
+            config_list (list): List of device configurations to update.
+            new_entry (dict): New device configuration to add or update.
+            
+        Returns:
+            None
         """
         new_id = new_entry.get('id')
         for i, entry in enumerate(config_list):
@@ -421,9 +600,19 @@ class Controller(Node):
 
 
     def _load_mqtt_parameters(self) -> bool:
-        """
-        Load MQTT connection parameters with fallback taken in order
-        of Parameter list, then devfile, and finally defaults.
+        """Load MQTT connection parameters with fallback hierarchy.
+        
+        Loads MQTT connection parameters using a fallback hierarchy:
+        1. Parameters from Polyglot interface
+        2. General configuration from devfile
+        3. Default configuration values
+        
+        Returns:
+            bool: True if parameters loaded successfully, False otherwise.
+            
+        Raises:
+            ValueError: If parameter values cannot be converted to expected types.
+            TypeError: If parameter types are invalid.
         """
         try:
             self.mqtt_server = self._get_str(
@@ -462,8 +651,16 @@ class Controller(Node):
 
     
     def _get_str(*args: Optional[Any]) -> Optional[str]:
-        """
-        Type correction to string.
+        """Get the first string value from a list of arguments.
+        
+        Searches through the provided arguments and returns the first one
+        that is a string type, or None if no string is found.
+        
+        Args:
+            *args: Variable number of arguments to search through.
+            
+        Returns:
+            Optional[str]: First string found, or None if no string exists.
         """
         for val in args:
             if isinstance(val, str):
@@ -471,8 +668,17 @@ class Controller(Node):
         return None
 
     def _get_int(*args: Optional[Any]) -> Optional[int]:
-        """
-        Type correction to int.
+        """Get the first integer value from a list of arguments.
+        
+        Searches through the provided arguments and returns the first one
+        that is an integer type or can be converted to an integer, or None
+        if no valid integer is found.
+        
+        Args:
+            *args: Variable number of arguments to search through.
+            
+        Returns:
+            Optional[int]: First integer found, or None if no valid integer exists.
         """
         for val in args:
             if isinstance(val, int):
@@ -483,8 +689,17 @@ class Controller(Node):
 
     
     def handleLevelChange(self, level):
-        """
-        Called via the LOGLEVEL event, to handle log level change.
+        """Handle log level changes from Polyglot.
+        
+        This method is called via the LOGLEVEL event when the log level
+        is changed through the Polyglot interface. It updates the logging
+        configuration based on the new level.
+        
+        Args:
+            level (dict): Dictionary containing the new log level information.
+            
+        Returns:
+            None
         """
         LOGGER.info(f'enter: level={level}')
         if level['level'] < 10:
@@ -497,8 +712,17 @@ class Controller(Node):
 
 
     def poll(self, flag):
-        """
-        Short & Long polling, only heartbeat in Controller
+        """Handle polling events from Polyglot.
+        
+        This method is called by Polyglot for both short and long polling
+        intervals. In the Controller, it only handles heartbeat functionality
+        to maintain communication with the ISY.
+        
+        Args:
+            flag (dict): Polling flag indicating the type of poll (short/long).
+            
+        Returns:
+            None
         """
         # no updates until node is through start-up
         if not self.ready_event:
@@ -510,9 +734,18 @@ class Controller(Node):
             self.heartbeat()
 
 
-    def query(self, command = None):
-        """
-        Query all nodes from the gateway.
+    def query(self, command=None):
+        """Query all nodes in the system.
+        
+        This method queries all nodes managed by the controller, causing
+        them to report their current driver values to the ISY. This is
+        typically called during startup or when a manual query is requested.
+        
+        Args:
+            command (str, optional): Command string for logging purposes.
+            
+        Returns:
+            None
         """
         LOGGER.info(f"Enter {command}")
         nodes = self.poly.getNodes()
@@ -521,11 +754,22 @@ class Controller(Node):
         LOGGER.debug(f"Exit")
 
 
-    def discover_cmd(self, command = None):
-        """
-        Call node discovery here. Called from controller start method and
-        from DISCOVER command received from ISY.
-        Calls checkParams, so can be used after update of devFile or config
+    def discover_cmd(self, command=None):
+        """Perform device discovery and node creation.
+        
+        This method is called both during controller startup and when a
+        DISCOVER command is received from the ISY. It loads configuration
+        parameters and performs device discovery to create or update nodes.
+        
+        Args:
+            command (str, optional): Command string for logging purposes.
+            
+        Returns:
+            bool: True if discovery completed successfully, False otherwise.
+            
+        Note:
+            This method can be used after updating devfile or configuration
+            to refresh the device list.
         """
         LOGGER.info(command)
         success = False
@@ -546,9 +790,15 @@ class Controller(Node):
 
 
     def _discover(self):
-        """
-        Discover devices, add nodes, clean-up nodes.
-        Set-up arrays to track new & existing nodes, to allow clean-up.
+        """Discover devices and manage node lifecycle.
+        
+        Performs the actual device discovery process, including:
+        1. Creating new nodes for discovered devices
+        2. Cleaning up nodes that are no longer in the configuration
+        3. Updating the node count
+        
+        Returns:
+            bool: True if discovery completed successfully, False otherwise.
         """
         success = False
         nodes_existing = self.poly.getNodes()
@@ -569,8 +819,17 @@ class Controller(Node):
 
 
     def _discover_nodes(self, nodes_existing, nodes_new):
-        """
-        Validate node configuration, set names & addresses, if not existing call create.
+        """Discover and create device nodes.
+        
+        Validates device configurations, sets names and addresses, and creates
+        new nodes for devices that don't already exist in the system.
+        
+        Args:
+            nodes_existing (dict): Dictionary of existing nodes.
+            nodes_new (list): List to track newly created nodes.
+            
+        Returns:
+            None
         """
         LOGGER.info(f"discovery start")
         self.discovery_in = True
@@ -591,8 +850,16 @@ class Controller(Node):
         
 
     def _validate_device_definition(self, dev):
-        """
-        Validate that device has required fields.
+        """Validate device configuration has required fields.
+        
+        Checks that a device configuration contains all required fields
+        for proper operation.
+        
+        Args:
+            dev (dict): Device configuration to validate.
+            
+        Returns:
+            bool: True if device is valid, False otherwise.
         """
         required_fields = ["id", "status_topic", "cmd_topic", "type"]
         if not all(field in dev for field in required_fields):
@@ -602,8 +869,19 @@ class Controller(Node):
     
 
     def _create_device_node(self, dev, name, address):
-        """
-        Create a device node using the validated device configuration.
+        """Create a device node from configuration.
+        
+        Creates a new device node using the validated device configuration.
+        The node type is determined from the device configuration and the
+        appropriate node class is instantiated.
+        
+        Args:
+            dev (dict): Device configuration.
+            name (str): Human-readable name for the device.
+            address (str): Unique address for the device node.
+            
+        Returns:
+            bool: True if node created successfully, False otherwise.
         """
         device_type = dev["type"]
         
@@ -633,8 +911,17 @@ class Controller(Node):
 
     
     def _add_device_status_topics(self, dev):
-        """
-        Add status topics for a device based on its configuration.
+        """Add status topics for a device based on its configuration.
+        
+        Adds MQTT status topics for a device based on its type and configuration.
+        This includes both primary status topics and any extra topics defined
+        in the device configuration.
+        
+        Args:
+            dev (dict): Device configuration.
+            
+        Returns:
+            None
         """
         device_type = dev["type"]
         device_config = DEVICE_CONFIG.get(device_type, {})
@@ -659,8 +946,17 @@ class Controller(Node):
 
         
     def _add_status_topics(self, dev, status_topics: List[str]):
-        """
-        Add status topics for a device and map them to the device address.
+        """Add status topics and map them to device address.
+        
+        Adds a list of status topics to the subscription list and maps each
+        topic to the corresponding device address for message routing.
+        
+        Args:
+            dev (dict): Device configuration.
+            status_topics (List[str]): List of MQTT status topics to add.
+            
+        Returns:
+            None
         """
         device_address = Controller._format_device_address(dev)
         
@@ -670,9 +966,18 @@ class Controller(Node):
             self.status_topics_to_devices[status_topic] = device_address
 
     def _normalize_topic(self, topic: Optional[str], prefix: Optional[str]) -> str:
-        """
-        Replace leading '~' in a topic with the given prefix.
-        If topic or prefix is None, returns an empty string or the topic unchanged.
+        """Normalize MQTT topic by replacing placeholder with prefix.
+        
+        Replaces leading '~' in a topic with the given prefix. This allows
+        for flexible topic configuration where '~' acts as a placeholder
+        for the actual prefix.
+        
+        Args:
+            topic (Optional[str]): MQTT topic to normalize.
+            prefix (Optional[str]): Prefix to replace '~' with.
+            
+        Returns:
+            str: Normalized topic string.
         """
         if topic is None:
             return ""
@@ -680,9 +985,18 @@ class Controller(Node):
             return prefix + topic[1:]
         return topic
             
-    def _cleanup_nodes(self, nodes_new, nodes_old):    
-        """
-        Remove nodes which exist but are not in devlist.
+    def _cleanup_nodes(self, nodes_new, nodes_old):
+        """Remove nodes that are no longer in the device list.
+        
+        Compares existing nodes with the current device list and removes
+        any nodes that are no longer configured.
+        
+        Args:
+            nodes_new (list): List of newly created nodes.
+            nodes_old (list): List of existing nodes to check for removal.
+            
+        Returns:
+            bool: Always returns True.
         """
         for node in nodes_old:
             if (node not in nodes_new):
@@ -695,8 +1009,16 @@ class Controller(Node):
 
     
     def _remove_status_topics(self, node):
-        """
-        Remove status topics for removed nodes.
+        """Remove status topics for a deleted node.
+        
+        Removes all status topics associated with a node that is being
+        deleted from the system.
+        
+        Args:
+            node (str): Node address to remove topics for.
+            
+        Returns:
+            None
         """
         for status_topic in self.status_topics_to_devices:
             if self.status_topics_to_devices[status_topic] == self.poly.getNode(node):
@@ -707,9 +1029,20 @@ class Controller(Node):
 
             
     def _on_connect(self, _mqttc, _userdata, _flags, rc):
-        """
-        MQTT triggered on connect routine.
-        Call subscribe and log success or error.
+        """Handle MQTT connection events.
+        
+        This method is called when the MQTT client connects or fails to connect
+        to the broker. It handles the connection result and initiates subscription
+        to status topics on successful connection.
+        
+        Args:
+            _mqttc: MQTT client instance (unused).
+            _userdata: User data passed to the client (unused).
+            _flags: Connection flags (unused).
+            rc (int): Return code indicating connection result (0 = success).
+            
+        Returns:
+            None
         """
         if rc == 0:
             LOGGER.info(f"Poly MQTT Connected")
@@ -719,9 +1052,19 @@ class Controller(Node):
 
             
     def _on_disconnect(self, _mqttc, _userdata, rc):
-        """
-        MQTT triggered on disconnect routine.
-        Call based on flag reconect and log success / error, or log disconnect.
+        """Handle MQTT disconnection events.
+        
+        This method is called when the MQTT client disconnects from the broker.
+        It handles both graceful disconnections and unexpected disconnections,
+        attempting to reconnect if the disconnection was unexpected.
+        
+        Args:
+            _mqttc: MQTT client instance (unused).
+            _userdata: User data passed to the client (unused).
+            rc (int): Return code indicating disconnection reason (0 = graceful).
+            
+        Returns:
+            None
         """
         if rc != 0:
             LOGGER.warning("Poly MQTT disconnected, trying to re-connect")
@@ -735,12 +1078,23 @@ class Controller(Node):
 
             
     def _on_message(self, _mqttc, _userdata, message):
-        """
-        MQTT triggered on message routine.
-        Exit if still in discovery.
-        Parse message based on if json and device type.
+        """Handle incoming MQTT messages.
         
-        TODO needs refactor.
+        This method is called when an MQTT message is received. It processes
+        the message payload and routes it to the appropriate device node based
+        on the topic. Supports both JSON and plain text message formats.
+        
+        Args:
+            _mqttc: MQTT client instance (unused).
+            _userdata: User data passed to the client (unused).
+            message: MQTT message object containing topic and payload.
+            
+        Returns:
+            None
+            
+        Note:
+            This method exits early if discovery is still in progress to avoid
+            processing messages during device configuration.
         """
         if self.discovery_in:
             return
@@ -787,19 +1141,38 @@ class Controller(Node):
 
             
     def _dev_by_topic(self, topic: str) -> Optional[str]:
-        """
-        Return, log node address using received message topic from the status topic index.
-        As each status topic is unique, it should be clean reverse look-up.
-        Possible TODO: write to MQTT device address, but would add remnants to MQTT.
+        """Get device address by MQTT topic.
+        
+        Performs a reverse lookup to find the device address associated with
+        a given MQTT status topic. Since each status topic is unique, this
+        provides a clean way to route messages to the correct device node.
+        
+        Args:
+            topic (str): MQTT topic to look up.
+            
+        Returns:
+            Optional[str]: Device address if found, None otherwise.
         """
         LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
         return self.status_topics_to_devices.get(topic, None)
 
     
     def _get_device_address_from_sensor_id(self, topic: str, sensor_type: str) -> Optional[str]:
-        """
-        Return, log node address using received message topic and sensor id from the message data.
-        Used for json messages and certain devices.  Falls back to node address by status topic.
+        """Get device address from sensor ID in JSON messages.
+        
+        This method is used for JSON messages from certain devices that contain
+        sensor information. It looks up the device address using both the topic
+        and sensor type information from the message data.
+        
+        Args:
+            topic (str): MQTT topic of the received message.
+            sensor_type (str): Type of sensor from the message data.
+            
+        Returns:
+            Optional[str]: Device address if found, None otherwise.
+            
+        Note:
+            Falls back to topic-based lookup if sensor ID lookup fails.
         """
         LOGGER.debug(f'GDA1: topic: {topic}  sensor_type: {sensor_type}')
         LOGGER.debug(f'GDA1b: devlist: {self.devlist}')
@@ -825,16 +1198,33 @@ class Controller(Node):
     
     @staticmethod
     def _format_device_address(dev) -> str:
-        """
-        Format device address with device id ; limit to max length of ISY address (14 char).
+        """Format device address for ISY compatibility.
+        
+        Creates a device address from the device ID that is compatible with
+        ISY address requirements. The address is limited to 14 characters
+        and special characters are normalized.
+        
+        Args:
+            dev (dict): Device configuration containing the 'id' field.
+            
+        Returns:
+            str: Formatted device address suitable for ISY.
         """
         return dev["id"].lower().replace("_", "").replace("-", "_")[:DEVICE_ADDRESS_MAX_LENGTH]
 
     
     def mqtt_pub(self, topic, message):
-        """
-        MQTT triggered on publish routine.
-        Call publish & log.
+        """Publish a message to an MQTT topic.
+        
+        Publishes a message to the specified MQTT topic using the connected
+        MQTT client. This is used to send commands to MQTT devices.
+        
+        Args:
+            topic (str): MQTT topic to publish to.
+            message (str): Message content to publish.
+            
+        Returns:
+            None
         """
 
         LOGGER.debug(f"mqtt_pub: topic: {topic}, message: {message}")
@@ -842,8 +1232,14 @@ class Controller(Node):
 
         
     def mqtt_subscribe(self):
-        """
-        Called by MQTT on (dis)connect to subscribe to status topics & log success / failure.
+        """Subscribe to MQTT status topics.
+        
+        This method is called when the MQTT client connects or reconnects
+        to subscribe to all configured status topics. It logs the success
+        or failure of each subscription attempt.
+        
+        Returns:
+            None
         """
         LOGGER.info("Poly MQTT subscribing...")
         result = 255
@@ -865,22 +1261,36 @@ class Controller(Node):
         LOGGER.info("Subscriptions Done")
 
 
-    def delete(self, command = None):
-        """
-        This is called by Polyglot upon deletion of the NodeServer. If the
-        process is co-resident and controlled by Polyglot, it will be
-        terminiated within 5 seconds of receiving this message.
+    def delete(self, command=None):
+        """Handle NodeServer deletion.
+        
+        This method is called by Polyglot when the NodeServer is being deleted.
+        If the process is co-resident and controlled by Polyglot, it will be
+        terminated within 5 seconds of receiving this message.
+        
+        Args:
+            command (str, optional): Command string for logging purposes.
+            
+        Returns:
+            None
         """
         LOGGER.info(command)
         self.setDriver('ST', 0, report = True, force = True)
         LOGGER.info('bye bye ... deleted.')
 
 
-    def stop(self, command = None):
-        """
-        This is called by Polyglot when the node server is stopped.  You have
-        the opportunity here to cleanly disconnect from your device or do
-        other shutdown type tasks.
+    def stop(self, command=None):
+        """Handle NodeServer shutdown.
+        
+        This method is called by Polyglot when the NodeServer is being stopped.
+        It provides an opportunity to cleanly disconnect from MQTT broker and
+        perform other shutdown tasks.
+        
+        Args:
+            command (str, optional): Command string for logging purposes.
+            
+        Returns:
+            None
         """
         LOGGER.info(command)
         self.setDriver('ST', 0, report = True, force = True)
@@ -892,9 +1302,14 @@ class Controller(Node):
 
 
     def heartbeat(self):
-        """
-        Heartbeat function uses the long poll interval to alternately send a ON and OFF
-        command back to the ISY.  Programs on the ISY can then monitor this.
+        """Send heartbeat signal to ISY.
+        
+        This function uses the long poll interval to alternately send ON and OFF
+        commands back to the ISY. Programs on the ISY can monitor this heartbeat
+        to determine if the NodeServer is running properly.
+        
+        Returns:
+            None
         """
         LOGGER.debug(f'heartbeat: hb={self.hb}')
         command = "DOF" if self.hb else "DON"
