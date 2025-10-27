@@ -210,7 +210,10 @@ class Controller(Node):
 
         
     def _mqtt_start(self):
-        """Initialize and connect to the user's MQTT server."""
+        """
+        Initialize and connect to the user's MQTT server.
+        Config based on Parameters, devfile, defaults; in that order.
+        """
         self.mqttc = Client(CallbackAPIVersion.VERSION1)
         self.mqttc.on_connect = self._on_connect
         self.mqttc.on_disconnect = self._on_disconnect  # type: ignore
@@ -317,7 +320,10 @@ class Controller(Node):
 
 
     def checkParams(self):
-        """Load and validate configuration parameters from devfile or devlist."""
+        """
+        Load and validate configuration parameters from devfile or devlist.
+        devlist will update / overwrite config values.
+        """
         
         # Load device configuration from YAML file
         if self.Parameters.get("devfile"):
@@ -340,7 +346,11 @@ class Controller(Node):
     
 
     def _load_devfile_config(self):
-        """Load device configuration from YAML file."""
+        """
+        Load device configuration from YAML file.
+        general and devices main sections.
+        Convert general section from array of dict to flat dict.
+        """
         devfile_path = self.Parameters["devfile"]
         if not devfile_path or not isinstance(devfile_path, str):
             LOGGER.error("Invalid devfile path provided")
@@ -371,7 +381,10 @@ class Controller(Node):
     
 
     def _load_devlist_config(self):
-        """Load device configuration from JSON string."""
+        """
+        Load device configuration from JSON string.
+        Update or add to devlist, initiated in devfile.
+        """
         devlist_data = self.Parameters["devlist"]
         if not devlist_data:
             LOGGER.error("No devlist data provided")
@@ -449,12 +462,18 @@ class Controller(Node):
 
     
     def _get_str(*args: Optional[Any]) -> Optional[str]:
+        """
+        Type correction to string.
+        """
         for val in args:
             if isinstance(val, str):
                 return val
         return None
 
     def _get_int(*args: Optional[Any]) -> Optional[int]:
+        """
+        Type correction to int.
+        """
         for val in args:
             if isinstance(val, int):
                 return val
@@ -662,7 +681,9 @@ class Controller(Node):
         return topic
             
     def _cleanup_nodes(self, nodes_new, nodes_old):    
-        # routine to remove nodes which exist but are not in devlist
+        """
+        Remove nodes which exist but are not in devlist.
+        """
         for node in nodes_old:
             if (node not in nodes_new):
                 LOGGER.info(f"need to delete node {node}")
@@ -674,6 +695,9 @@ class Controller(Node):
 
     
     def _remove_status_topics(self, node):
+        """
+        Remove status topics for removed nodes.
+        """
         for status_topic in self.status_topics_to_devices:
             if self.status_topics_to_devices[status_topic] == self.poly.getNode(node):
                 self.status_topics.remove(status_topic)
@@ -683,6 +707,10 @@ class Controller(Node):
 
             
     def _on_connect(self, _mqttc, _userdata, _flags, rc):
+        """
+        MQTT triggered on connect routine.
+        Call subscribe and log success or error.
+        """
         if rc == 0:
             LOGGER.info(f"Poly MQTT Connected")
             self.mqtt_subscribe()
@@ -691,6 +719,10 @@ class Controller(Node):
 
             
     def _on_disconnect(self, _mqttc, _userdata, rc):
+        """
+        MQTT triggered on disconnect routine.
+        Call based on flag reconect and log success / error, or log disconnect.
+        """
         if rc != 0:
             LOGGER.warning("Poly MQTT disconnected, trying to re-connect")
             try:
@@ -703,6 +735,13 @@ class Controller(Node):
 
             
     def _on_message(self, _mqttc, _userdata, message):
+        """
+        MQTT triggered on message routine.
+        Exit if still in discovery.
+        Parse message based on if json and device type.
+        
+        TODO needs refactor.
+        """
         if self.discovery_in:
             return
         topic = message.topic
@@ -748,11 +787,20 @@ class Controller(Node):
 
             
     def _dev_by_topic(self, topic: str) -> Optional[str]:
+        """
+        Return, log node address using received message topic from the status topic index.
+        As each status topic is unique, it should be clean reverse look-up.
+        Possible TODO: write to MQTT device address, but would add remnants to MQTT.
+        """
         LOGGER.debug(f'STATUS TO DEVICES = {self.status_topics_to_devices.get(topic, None)}')
         return self.status_topics_to_devices.get(topic, None)
 
     
     def _get_device_address_from_sensor_id(self, topic: str, sensor_type: str) -> Optional[str]:
+        """
+        Return, log node address using received message topic and sensor id from the message data.
+        Used for json messages and certain devices.  Falls back to node address by status topic.
+        """
         LOGGER.debug(f'GDA1: topic: {topic}  sensor_type: {sensor_type}')
         LOGGER.debug(f'GDA1b: devlist: {self.devlist}')
         
@@ -777,15 +825,26 @@ class Controller(Node):
     
     @staticmethod
     def _format_device_address(dev) -> str:
+        """
+        Format device address with device id ; limit to max length of ISY address (14 char).
+        """
         return dev["id"].lower().replace("_", "").replace("-", "_")[:DEVICE_ADDRESS_MAX_LENGTH]
 
     
     def mqtt_pub(self, topic, message):
+        """
+        MQTT triggered on publish routine.
+        Call publish & log.
+        """
+
         LOGGER.debug(f"mqtt_pub: topic: {topic}, message: {message}")
         self.mqttc.publish(topic, message, retain=False)
 
         
     def mqtt_subscribe(self):
+        """
+        Called by MQTT on (dis)connect to subscribe to status topics & log success / failure.
+        """
         LOGGER.info("Poly MQTT subscribing...")
         result = 255
         results = []
