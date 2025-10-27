@@ -21,9 +21,10 @@ VERSION = '0.50.0'
 
 """
 0.50.0
-INPROCESS improve commenting for readability
-INPROCESS rewrite for Pythonic maintainability
+DONE rewrite Controller for Pythonic & commenting
 DONE add user defined default status_prefix & cmd_prefix
+DONE add numofnodes
+INPROCESS improve nodes for Pythonc & commenting
 
 0.40.3
 DONE: fixed typos in POLYGLOT_CONFIG.md
