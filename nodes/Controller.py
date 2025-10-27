@@ -972,6 +972,7 @@ class Controller(Node):
             status_topic = self._normalize_topic(raw_topic, self.status_prefix)
             self.status_topics.append(status_topic)
             self.status_topics_to_devices[status_topic] = device_address
+            
 
     def _normalize_topic(self, topic: Optional[str], prefix: Optional[str]) -> str:
         """Normalize MQTT topic by replacing placeholder with prefix.
@@ -992,6 +993,7 @@ class Controller(Node):
         if topic.startswith("~") and prefix is not None:
             return prefix + topic[1:]
         return topic
+    
             
     def _cleanup_nodes(self, nodes_new, nodes_old):
         """Remove nodes that are no longer in the device list.
@@ -1335,15 +1337,13 @@ class Controller(Node):
         results = []
         for stopic in self.status_topics:
             results.append((stopic, tuple(self.mqttc.subscribe(stopic))))
+            
         for (topic, (result, mid)) in results:
             if result == 0:
-                LOGGER.info(
-                    f"Subscribed to {topic} MID: {mid}, res: {result}"
-                )
+                LOGGER.info(f"Subscribed to {topic} MID: {mid}, res: {result}")
             else:
-                LOGGER.error(
-                    f"Failed to subscribe {topic} MID: {mid}, res: {result}"
-                )
+                LOGGER.error(f"Failed to subscribe {topic} MID: {mid}, res: {result}")
+                
         for node in self.poly.getNodes():
             if node != self.address:
                 self.poly.getNode(node).query()
