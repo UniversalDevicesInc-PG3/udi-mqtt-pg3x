@@ -40,7 +40,6 @@ STATUS_TOPIC_PREFIX = 'stat/'
 TELE_TOPIC_PREFIX = 'tele/'
 RESULT_TOPIC_SUFFIX = '/RESULT'
 STATUS10_TOPIC_SUFFIX = '/STATUS10'
-DEVICE_ADDRESS_MAX_LENGTH = 14
 
 # Sensor processor mapping for MQTT message processing
 SENSOR_PROCESSORS = {
@@ -846,7 +845,7 @@ class Controller(Node):
                 continue
                 
             name = dev.get("name", dev["id"])  # Use friendly name or fallback to ID
-            address = Controller._format_device_address(dev)
+            address = self._format_device_address(dev)
             
             if address not in nodes_existing:
                 if not self._create_device_node(dev, name, address):
@@ -966,7 +965,7 @@ class Controller(Node):
         Returns:
             None
         """
-        device_address = Controller._format_device_address(dev)
+        device_address = self._format_device_address(dev)
         
         for raw_topic in status_topics:
             status_topic = self._normalize_topic(raw_topic, self.status_prefix)
@@ -1276,7 +1275,7 @@ class Controller(Node):
             if ('sensor_id' in device and 
                 topic_part in device['status_topic'] and 
                 sensor_type in device['sensor_id']):
-                node_id = Controller._format_device_address(device)
+                node_id = self._format_device_address(device)
                 LOGGER.debug(f'GDA2b: NODE_ID: {node_id}, {topic}, {sensor_type}')
                 return node_id
         
@@ -1287,8 +1286,7 @@ class Controller(Node):
         return node_id
 
     
-    @staticmethod
-    def _format_device_address(dev) -> str:
+    def _format_device_address(self, dev) -> str:
         """Format device address for ISY compatibility.
         
         Creates a device address from the device ID that is compatible with
@@ -1300,8 +1298,16 @@ class Controller(Node):
             
         Returns:
             str: Formatted device address suitable for ISY.
-        """
-        return dev["id"].lower().replace("_", "").replace("-", "_")[:DEVICE_ADDRESS_MAX_LENGTH]
+        """        
+        # was return dev["id"].lower().replace("_", "").replace("-", "_")[:DEVICE_ADDRESS_MAX_LENGTH]
+        # poly funciton:
+        # def getValidAddress(self, name):
+        #     name = bytes(name, 'utf-8').decode('utf-8','ignore')
+        #     return re.sub(r"[<>`~!@#$%^&*(){}[\]?/\\;:\"'\-]+", "", name.lower())[:14]
+
+        # retaining former replace function for backward compatibility
+        name = dev["id"].replace("_", "").replace("-", "_")
+        return self.poly.getValidAddress(name)
 
     
     def mqtt_pub(self, topic, message):
