@@ -51,6 +51,7 @@ class MQSwitch(udi_interface.Node):
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
         self.on = False
+        
 
     def updateInfo(self, payload, topic: str):
         if payload == "ON":
@@ -64,15 +65,22 @@ class MQSwitch(udi_interface.Node):
                 self.on = False
             self.setDriver("ST", 0)
         else:
-            LOGGER.error("Invalid payload {}".format(payload))
+            LOGGER.error(f"Topic:{topic}, Invalid payload:{payload}")
+            return
+        LOGGER.info(f"Topic{topic}, Successful payload:{payload}")
+        
 
     def cmd_on(self, command):
+        LOGGER.debug(command)
         self.on = True
         self.controller.mqtt_pub(self.cmd_topic, "ON")
+        
 
     def cmd_off(self, command):
+        LOGGER.debug(command)
         self.on = False
         self.controller.mqtt_pub(self.cmd_topic, "OFF")
+        
 
     def query(self, command=None):
         """
@@ -82,6 +90,7 @@ class MQSwitch(udi_interface.Node):
             """
         self.controller.mqtt_pub(self.cmd_topic, "")
         self.reportDrivers()
+        
 
     # all the drivers - for reference
     drivers = [
