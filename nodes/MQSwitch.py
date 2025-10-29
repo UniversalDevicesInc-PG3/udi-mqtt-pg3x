@@ -1,109 +1,121 @@
 """
-mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
+mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy for a generic MQTT switch.
 
-(C) 2024
+(C) 2025
 
-node MQswitch
+Node: MQSwitch
 """
-
 import udi_interface
+from typing import Optional
 
 LOGGER = udi_interface.LOGGER
 
 
 class MQSwitch(udi_interface.Node):
+    """
+    Represents a generic MQTT switch device in the ISY system.
+
+    This node communicates with an MQTT device that accepts "ON" and "OFF"
+    payloads to control its state. It reports its power status (On/Off)
+    to the ISY controller.
+    """
     id = 'MQSW'
 
-    """
-    This is the class that all the Nodes will be represented by. You will
-    add this to Polyglot/ISY with the interface.addNode method.
-
-    Class Variables:
-    self.primary: String address of the parent node.
-    self.address: String address of this Node 14 character limit.
-                  (ISY limitation)
-    self.added: Boolean Confirmed added to ISY
-
-    Class Methods:
-    setDriver('ST', 1, report = True, force = False):
-        This sets the driver 'ST' to 1. If report is False we do not report
-        it to Polyglot/ISY. If force is True, we send a report even if the
-        value hasn't changed.
-    reportDriver(driver, force): report the driver value to Polyglot/ISY if
-        it has changed.  if force is true, send regardless.
-    reportDrivers(): Forces a full update of all drivers to Polyglot/ISY.
-    query(): Called when ISY sends a query request to Polyglot for this
-        specific node
-    """
-
-    def __init__(self, polyglot, primary, address, name, device):
+    def __init__(self, polyglot, primary: str, address: str, name: str, device: dict):
         """
-        Optional.
-        Super runs all the parent class necessities. You do NOT have
-        to override the __init__ method, but if you do, you MUST call super.
+        Initializes the MQSwitch node.
 
-        :param polyglot: Reference to the Interface class
-        :param primary: Parent address
-        :param address: This nodes address
-        :param name: This nodes name
+        Args:
+            polyglot: The Polyglot interface instance.
+            primary: The address of the parent node.
+            address: The address of this node.
+            name: The name of this node.
+            device: A dictionary containing device-specific information,
+                    including the 'cmd_topic' for MQTT communication.
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
-        self.on = False
-        
+        self.on_state = False  # Tracks the on/off state of the switch.
 
-    def updateInfo(self, payload, topic: str):
-        if payload == "ON":
-            if not self.on:
-                self.reportCmd("DON")
-                self.on = True
-            self.setDriver("ST", 100)
-        elif payload == "OFF":
-            if self.on:
-                self.reportCmd("DOF")
-                self.on = False
-            self.setDriver("ST", 0)
-        else:
-            LOGGER.error(f"Topic:{topic}, Invalid payload:{payload}")
-            return
-        LOGGER.info(f"Topic{topic}, Successful payload:{payload}")
-        
 
-    def cmd_on(self, command):
-        LOGGER.debug(command)
-        self.on = True
-        self.controller.mqtt_pub(self.cmd_topic, "ON")
-        
-
-    def cmd_off(self, command):
-        LOGGER.debug(command)
-        self.on = False
-        self.controller.mqtt_pub(self.cmd_topic, "OFF")
-        
-
-    def query(self, command=None):
+    def updateInfo(self, payload: str, topic: str):
         """
-            Called by ISY to report all drivers for this node. This is done in
-            the parent class, so you don't need to override this method unless
-            there is a need.
-            """
+        Updates the node's state based on incoming MQTT messages.
+
+        This method is called when a message is received on the subscribed
+        MQTT topic. It parses the payload and updates the node's 'ST'
+        driver, which represents the power state.
+
+        Args:
+            payload: The MQTT message payload (e.g., "ON", "OFF").
+            topic: The MQTT topic on which the message was received.
+        """
+        payload_upper = payload.upper()
+        if payload_upper == "ON":
+            self.setDriver("ST", 100)
+            if not self.on_state:
+                self.reportCmd("DON")
+                self.on_state = True
+        elif payload_upper == "OFF":
+            self.setDriver("ST", 0)
+            if self.on_state:
+                self.reportCmd("DOF")
+                self.on_state = False
+        else:
+            LOGGER.error(f"Topic: {topic}, Invalid payload: {payload}")
+            return
+        LOGGER.info(f"Topic: {topic}, Successful payload: {payload}")
+
+
+    def cmd_on(self, command: dict):
+        """
+        Handles the 'DON' command from the ISY controller to turn the switch on.
+
+        Args:
+            command: The command dictionary from the ISY.
+        """
+        LOGGER.debug(f"Received ON command: {command}")
+        self.controller.mqtt_pub(self.cmd_topic, "ON")
+
+
+    def cmd_off(self, command: dict):
+        """
+        Handles the 'DOF' command from the ISY controller to turn the switch off.
+
+        Args:
+            command: The command dictionary from the ISY.
+        """
+        LOGGER.debug(f"Received OFF command: {command}")
+        self.controller.mqtt_pub(self.cmd_topic, "OFF")
+
+
+    def query(self, command: Optional[dict] = None):
+        """
+        Queries the device for its current state.
+
+        This method is called by the ISY to get the current status of the node.
+        It publishes an empty message to the command topic to request a
+        status update from the MQTT device and reports all drivers.
+
+        Args:
+            command: The command dictionary from the ISY (optional).
+        """
         self.controller.mqtt_pub(self.cmd_topic, "")
         self.reportDrivers()
-        
 
-    # all the drivers - for reference
+
+    # For Polyglot internal use. Defines the node's drivers.
     drivers = [
         {"driver": "ST", "value": 0, "uom": 78, "name": "Power"}
     ]
 
-    """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
-    """
+    # For Polyglot internal use. Maps ISY commands to node methods.
     commands = {
         "QUERY": query,
         "DON": cmd_on,
-        "DOF": cmd_off}
+        "DOF": cmd_off
+    }
 
+    # For Polyglot UI hint. [type, subtype, major_version, minor_version]
     hint = [4, 2, 0, 0]
