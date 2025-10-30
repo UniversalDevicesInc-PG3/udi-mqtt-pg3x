@@ -5,13 +5,22 @@ mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy for a generic MQTT switch.
 
 Node: MQSwitch
 """
-import udi_interface
+
+# std libraries
 from typing import Optional
 
-LOGGER = udi_interface.LOGGER
+# external libraries
+from udi_interface import Node, LOGGER
 
+# personal libraries
+pass
 
-class MQSwitch(udi_interface.Node):
+# constants
+OFF = 0
+ON = 100
+UNKNOWN = 101
+
+class MQSwitch(Node):
     """
     Represents a generic MQTT switch device in the ISY system.
 
@@ -37,6 +46,7 @@ class MQSwitch(udi_interface.Node):
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
         self.on_state = False  # Tracks the on/off state of the switch.
+        self.lpfx = f'{address}:{name}'
 
 
     def updateInfo(self, payload: str, topic: str):
@@ -51,43 +61,49 @@ class MQSwitch(udi_interface.Node):
             payload: The MQTT message payload (e.g., "ON", "OFF").
             topic: The MQTT topic on which the message was received.
         """
+        LOGGER.info(f"update:{self.lpfx} topic:{topic}, payload:{payload}")
         payload_upper = payload.upper()
         if payload_upper == "ON":
-            self.setDriver("ST", 100)
+            self.setDriver("ST", ON)
             if not self.on_state:
                 self.reportCmd("DON")
                 self.on_state = True
         elif payload_upper == "OFF":
-            self.setDriver("ST", 0)
+            self.setDriver("ST", OFF)
             if self.on_state:
                 self.reportCmd("DOF")
                 self.on_state = False
         else:
             LOGGER.error(f"Topic: {topic}, Invalid payload: {payload}")
+            self.setDriver("ST", UNKNOWN)
             return
-        LOGGER.info(f"Topic: {topic}, Successful payload: {payload}")
+        LOGGER.debug("Exit")
 
 
     def cmd_on(self, command: dict):
         """
-        Handles the 'DON' command from the ISY controller to turn the switch on.
+        Handles the 'DON' command from the ISY controller to send ON command.
+        NOTE: on_state is not changed until received in update.
 
         Args:
             command: The command dictionary from the ISY.
         """
-        LOGGER.debug(f"Received ON command: {command}")
+        LOGGER.info(f"{self.lpfx}, {command}")
         self.controller.mqtt_pub(self.cmd_topic, "ON")
+        LOGGER.debug("Exit")
 
 
     def cmd_off(self, command: dict):
         """
-        Handles the 'DOF' command from the ISY controller to turn the switch off.
+        Handles the 'DOF' command from the ISY controller to send OFF command.
+        NOTE: on_state is not changed until received in update.
 
         Args:
             command: The command dictionary from the ISY.
         """
-        LOGGER.debug(f"Received OFF command: {command}")
+        LOGGER.info(f"{self.lpfx}, {command}")
         self.controller.mqtt_pub(self.cmd_topic, "OFF")
+        LOGGER.debug("Exit")
 
 
     def query(self, command: Optional[dict] = None):
@@ -101,21 +117,35 @@ class MQSwitch(udi_interface.Node):
         Args:
             command: The command dictionary from the ISY (optional).
         """
+        LOGGER.info(f"{self.lpfx}, {command}")
         self.controller.mqtt_pub(self.cmd_topic, "")
         self.reportDrivers()
+        LOGGER.debug("Exit")
 
 
-    # For Polyglot internal use. Defines the node's drivers.
+    hint = '0x01040200'
+    # home, relay, on/off power strip
+    # Hints See: https://github.com/UniversalDevicesInc/hints
+
+
+    """
+    This is an array of dictionary items containing the variable names(drivers)
+    values and uoms(units of measure) from ISY. This is how ISY knows what kind
+    of variable to display. Check the UOM's in the WSDK for a complete list.
+    UOM 2 is boolean so the ISY will display 'True/False'
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 78, "name": "Power"}
+        {"driver": "ST", "value": OFF, "uom": 78, "name": "Power"}
     ]
 
-    # For Polyglot internal use. Maps ISY commands to node methods.
+    
+    """
+    This is a dictionary of commands. If ISY sends a command to the NodeServer,
+    this tells it which method to call. DON calls setOn, etc.
+    """
     commands = {
-        "QUERY": query,
         "DON": cmd_on,
-        "DOF": cmd_off
+        "DOF": cmd_off,
+        'QUERY': query,
     }
 
-    # For Polyglot UI hint. [type, subtype, major_version, minor_version]
-    hint = [4, 2, 0, 0]

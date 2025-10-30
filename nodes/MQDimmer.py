@@ -1,7 +1,7 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025
 
 node MQDimmer
 
@@ -9,21 +9,29 @@ Class for a single channel Dimmer.
 Currently, supports RJWF-02A
 """
 
+# std libraries
 import json
 
-import udi_interface
+# external libraries
+from udi_interface import Node, LOGGER
 
-LOGGER = udi_interface.LOGGER
+# personal libraries
+pass
+
+# constants
+OFF = 0
+FULL = 100
+INC = 10
+DIMLOWERLIMIT = 10 # Dimmer, keep onlevel to a minimum level
 
 
-class MQDimmer(udi_interface.Node):
+class MQDimmer(Node):
     """Node representing a single-channel MQTT-controlled dimmer.
 
     This class handles communication with an MQTT dimmer device, allowing for
     on/off control, brightness adjustments, and status reporting to the
     Polisy/ISY system.
     """
-
     id = "mqdimmer"
 
     def __init__(self, polyglot, primary, address, name, device):
@@ -39,9 +47,10 @@ class MQDimmer(udi_interface.Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
+        self.lpfx = f'{address}:{name}'
         self.cmd_topic = device["cmd_topic"]
         self.status_topic = device["status_topic"]
-        self.dimmer = 0
+        self.dimmer = OFF
 
 
     def updateInfo(self, payload: str, topic: str):
@@ -54,6 +63,7 @@ class MQDimmer(udi_interface.Node):
             payload: The JSON string received from the MQTT topic.
             topic: The MQTT topic from which the message was received.
         """
+        LOGGER.info(f"update:{self.lpfx} topic:{topic}, payload:{payload}")
         try:
             data = json.loads(payload)
             power = data.get("POWER")
@@ -69,7 +79,7 @@ class MQDimmer(udi_interface.Node):
                 # If dimmer level is not specified on "ON", we might need to assume a level.
                 # Here we use the last known dimmer level if it was > 0, otherwise default to 100.
                 if new_dimmer is None:
-                    new_dimmer = self.dimmer if self.dimmer > 0 else 100
+                    new_dimmer = self.dimmer if self.dimmer > OFF else FULL
                 self.reportCmd("DON")
                 self._set_dimmer_level(
                     new_dimmer, report=False
@@ -82,9 +92,9 @@ class MQDimmer(udi_interface.Node):
 
             # If only dimmer level is provided
             elif new_dimmer is not None:
-                if self.dimmer == 0 and new_dimmer > 0:
+                if self.dimmer == OFF and new_dimmer > OFF:
                     self.reportCmd("DON")
-                elif self.dimmer > 0 and new_dimmer == 0:
+                elif self.dimmer > OFF and new_dimmer == OFF:
                     self.reportCmd("DOF")
                 self._set_dimmer_level(new_dimmer, report=False)
 
@@ -92,23 +102,24 @@ class MQDimmer(udi_interface.Node):
             LOGGER.error(f"Could not decode JSON payload '{payload}': {e}")
         except (ValueError, TypeError) as e:
             LOGGER.error(f"Error processing payload data '{payload}': {e}")
+        LOGGER.debug("Exit")
 
 
     def _set_dimmer_level(self, level: int, report: bool = True):
         """Sets the dimmer level, updates the driver, and publishes to MQTT.
 
         Args:
-            level: The desired dimmer level (0-100).
+            level: The desired dimmer level (0-100)(OFF-FULL).
             report: If True, sends the command to the MQTT device.
         """
-        level = max(0, min(100, level))  # Clamp level between 0 and 100
+        level = max(OFF, min(FULL, level))  # Clamp level between 0 and 100
         self.dimmer = level
         self.setDriver("ST", self.dimmer)
         if report:
             self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
 
 
-    def set_on(self, command):
+    def on_cmd(self, command):
         """Handles the 'DON' command from ISY to turn the dimmer on.
 
         Sets the dimmer to a specified value or a default value if not
@@ -117,6 +128,7 @@ class MQDimmer(udi_interface.Node):
         Args:
             command: The command object from ISY. Can contain a 'value' key.
         """
+        LOGGER.info(f"{self.lpfx}, {command}")
         try:
             level = int(command.get("value", self.dimmer))
         except (ValueError, TypeError):
@@ -125,42 +137,49 @@ class MQDimmer(udi_interface.Node):
             )
             level = self.dimmer
 
-        if level == 0:
-            level = 10  # Default to 10% if turning on with a level of 0.
+        if level == OFF:
+            level = INC  # Default to INC(10%) if turning on with a level of OFF(0).
         self._set_dimmer_level(level)
+        LOGGER.debug("Exit")
 
 
-    def set_off(self, command):
+    def off_cmd(self, command):
         """Handles the 'DOF' command from ISY to turn the dimmer off.
 
         Args:
             command: The command object from ISY.
         """
-        self._set_dimmer_level(0)
+        LOGGER.info(f"{self.lpfx}, {command}")
+        self._set_dimmer_level(OFF)
+        LOGGER.debug("Exit")
 
 
-    def brighten(self, command):
+    def brt_cmd(self, command):
         """Handles the 'BRT' command from ISY to brighten the light.
 
-        Increases the dimmer level by 10%.
+        Increases the dimmer level by INC.
 
         Args:
             command: The command object from ISY.
         """
-        new_level = self.dimmer + 10
+        LOGGER.info(f"{self.lpfx}, {command}")
+        new_level = min(self.dimmer + INC, FULL)
         self._set_dimmer_level(new_level)
+        LOGGER.debug("Exit")
 
 
-    def dim(self, command):
+    def dim_cmd(self, command):
         """Handles the 'DIM' command from ISY to dim the light.
 
-        Decreases the dimmer level by 10%.
+        Decreases the dimmer level by INC.
 
         Args:
             command: The command object from ISY.
         """
-        new_level = self.dimmer - 10
+        LOGGER.info(f"{self.lpfx}, {command}")
+        new_level = max(self.dimmer - INC, OFF)
         self._set_dimmer_level(new_level)
+        LOGGER.debug("Exit")
 
 
     def query(self, command=None):
@@ -171,14 +190,28 @@ class MQDimmer(udi_interface.Node):
         Args:
             command: The command object from ISY (optional).
         """
+        LOGGER.info(f"{self.lpfx}, {command}")
         query_topic = self.cmd_topic.rsplit("/", 1)[0] + "/State"
         self.controller.mqtt_pub(query_topic, "")
         LOGGER.info(f"Querying device state via topic: {query_topic}")
         self.reportDrivers()
+        LOGGER.debug("Exit")
 
 
-    # all the drivers - for reference
-    drivers = [{"driver": "ST", "value": 0, "uom": 51, "name": "Status"}]
+    hint = '0x01020900'
+    # home, controller, dimmer switch
+    # Hints See: https://github.com/UniversalDevicesInc/hints
+
+
+    """
+    This is an array of dictionary items containing the variable names(drivers)
+    values and uoms(units of measure) from ISY. This is how ISY knows what kind
+    of variable to display. Check the UOM's in the WSDK for a complete list.
+    UOM 2 is boolean so the ISY will display 'True/False'
+    """
+    drivers = [
+        {'driver': 'ST', 'value': OFF, 'uom': 51, 'name': "Status"},
+    ]
 
 
     """
@@ -187,11 +220,8 @@ class MQDimmer(udi_interface.Node):
     """
     commands = {
         "QUERY": query,
-        "DON": set_on,
-        "DOF": set_off,
-        "BRT": brighten,
-        "DIM": dim,
+        "DON": on_cmd,
+        "DOF": off_cmd,
+        "BRT": brt_cmd,
+        "DIM": dim_cmd,
     }
-
-
-    hint = [1, 2, 9, 0]
