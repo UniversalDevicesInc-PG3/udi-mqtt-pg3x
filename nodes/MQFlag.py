@@ -1,12 +1,13 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025
 
 node MQFlag
 
-this meant as a flag for if you have a sensor or condition on your IOT device
-which you want the device program rather than the ISY to flag
+This node is intended as a flag for a sensor or condition on an IoT device,
+allowing the device program, rather than the ISY, to control the state.
+
 FLAG-0 = OK
 FLAG-1 = NOK
 FLAG-2 = LO
@@ -20,80 +21,114 @@ FLAG-9 = TRIGGER
 FLAG-10 = ON
 FLAG-11 = OFF
 FLAG-12 = ---
-payload is direct (like SW) not JSON encoded (like SENSOR)
-example device: liquid float {OK, LO, HI}
-example condition: IOT devices sensor connections {OK, NOK, ERR(OR)}
+
+Payload is direct (like a switch) not JSON encoded (like a sensor).
+Example device: liquid float {OK, LO, HI}
+Example condition: IOT device sensor connections {OK, NOK, ERR(OR)}
 """
 
-import udi_interface
+# std libraries
+pass
 
-LOGGER = udi_interface.LOGGER
+# external libraries
+from udi_interface import Node, LOGGER
 
-class MQFlag(udi_interface.Node):
+# personal libraries
+pass
+
+# Constants
+PAYLOAD_MAP = {
+    "OK": 0,
+    "NOK": 1,
+    "LO": 2,
+    "HI": 3,
+    "ERR": 4,
+    "IN": 5,
+    "OUT": 6,
+    "UP": 7,
+    "DOWN": 8,
+    "TRIGGER": 9,
+    "ON": 10,
+    "OFF": 11,
+    "---": 12,
+}
+DEFAULT_STATE = PAYLOAD_MAP["ERR"]
+
+
+class MQFlag(Node):
+    """Node representing a generic flag or state from an MQTT device.
+
+    This class receives simple string payloads (e.g., "OK", "ERR") from an
+    MQTT topic and maps them to a numerical state in the Polisy/ISY system.
+    """
     id = 'mqflag'
-    
-    """
-    This is the class that all the Nodes will be represented by. You will
-    add this to Polyglot/ISY with the interface.addNode method.
-    """
+
     def __init__(self, polyglot, primary, address, name, device):
-        """
-        Super runs all the parent class necessities.
-        :param polyglot: Reference to the Interface class
-        :param primary: Parent address
-        :param address: This nodes address
-        :param name: This nodes name
+        """Initializes the MQFlag node.
+
+        Args:
+            polyglot: Reference to the Polyglot interface.
+            primary: The address of the parent node.
+            address: The address of this node.
+            name: The name of this node.
+            device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
+        self.lpfx = f'{address}:{name}'
         self.cmd_topic = device["cmd_topic"]
 
+
     def updateInfo(self, payload, topic: str):
-        if payload == "OK":
-            self.setDriver("ST", 0)
-        elif payload == "NOK":
-            self.setDriver("ST", 1)
-        elif payload == "LO":
-            self.setDriver("ST", 2)
-        elif payload == "HI":
-            self.setDriver("ST", 3)
-        elif payload == "IN":
-            self.setDriver("ST", 5)
-        elif payload == "OUT":
-            self.setDriver("ST", 6)
-        elif payload == "UP":
-            self.setDriver("ST", 7)
-        elif payload == "DOWN":
-            self.setDriver("ST", 8)
-        elif payload == "TRIGGER":
-            self.setDriver("ST", 9)
-        elif payload == "ON":
-            self.setDriver("ST", 10)
-        elif payload == "OFF":
-            self.setDriver("ST", 11)
-        elif payload == "---":
-            self.setDriver("ST", 12)
-        else:
-            LOGGER.error("Invalid payload {}".format(payload))
-            payload = "ERR"
-            self.setDriver("ST", 4)
+        """Updates the node's status based on incoming MQTT messages.
+
+        Args:
+            payload: The string payload received from the MQTT topic.
+            topic: The MQTT topic from which the message was received.
+        """
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
+        state = PAYLOAD_MAP.get(payload)
+
+        if state is None:
+            LOGGER.error(f"Invalid payload received: {payload}")
+            state = DEFAULT_STATE
+        
+        self.setDriver("ST", state)
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def reset_send(self, command):
+        """Handles the 'RESET' command from ISY.
+        
+        Publishes 'RESET' to the command topic.
+
+        Args:
+            command: The command object from ISY.
+        """
+        LOGGER.info(f"{self.lpfx} {command}, {self.cmd_topic}")
         self.controller.mqtt_pub(self.cmd_topic, "RESET")
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def query(self, command=None):
+        """Handles the 'QUERY' command from ISY.
+
+        Requests the current state from the MQTT device and reports all drivers.
+
+        Args:
+            command: The command object from ISY (optional).
         """
-        Called by ISY to report all drivers for this node. This is done in
-        the parent class, so you don't need to override this method unless
-        there is a need.
-        """
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, "")
         self.reportDrivers()
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     # all the drivers - for reference
     drivers = [
         {"driver": "ST", "value": 0, "uom": 25}
     ]
+
 
     """
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
@@ -103,4 +138,3 @@ class MQFlag(udi_interface.Node):
         "QUERY": query,
         "RESET": reset_send
     }
-

@@ -61,7 +61,7 @@ class MQSwitch(Node):
             payload: The MQTT message payload (e.g., "ON", "OFF").
             topic: The MQTT topic on which the message was received.
         """
-        LOGGER.info(f"update:{self.lpfx} topic:{topic}, payload:{payload}")
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
         payload_upper = payload.upper()
         if payload_upper == "ON":
             self.setDriver("ST", ON)

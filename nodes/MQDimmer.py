@@ -63,7 +63,7 @@ class MQDimmer(Node):
             payload: The JSON string received from the MQTT topic.
             topic: The MQTT topic from which the message was received.
         """
-        LOGGER.info(f"update:{self.lpfx} topic:{topic}, payload:{payload}")
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
         try:
             data = json.loads(payload)
             power = data.get("POWER")
@@ -128,7 +128,7 @@ class MQDimmer(Node):
         Args:
             command: The command object from ISY. Can contain a 'value' key.
         """
-        LOGGER.info(f"{self.lpfx}, {command}")
+        LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         try:
             level = int(command.get("value", self.dimmer))
         except (ValueError, TypeError):
@@ -149,7 +149,7 @@ class MQDimmer(Node):
         Args:
             command: The command object from ISY.
         """
-        LOGGER.info(f"{self.lpfx}, {command}")
+        LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self._set_dimmer_level(OFF)
         LOGGER.debug("Exit")
 
@@ -162,7 +162,7 @@ class MQDimmer(Node):
         Args:
             command: The command object from ISY.
         """
-        LOGGER.info(f"{self.lpfx}, {command}")
+        LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         new_level = min(self.dimmer + INC, FULL)
         self._set_dimmer_level(new_level)
         LOGGER.debug("Exit")
@@ -176,7 +176,7 @@ class MQDimmer(Node):
         Args:
             command: The command object from ISY.
         """
-        LOGGER.info(f"{self.lpfx}, {command}")
+        LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         new_level = max(self.dimmer - INC, OFF)
         self._set_dimmer_level(new_level)
         LOGGER.debug("Exit")
