@@ -140,6 +140,7 @@ class MQDimmer(Node):
         if level == OFF:
             level = INC  # Default to INC(10%) if turning on with a level of OFF(0).
         self._set_dimmer_level(level)
+        self.reportCmd("DON") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 
@@ -151,6 +152,7 @@ class MQDimmer(Node):
         """
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self._set_dimmer_level(OFF)
+        self.reportCmd("DOF") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 
@@ -165,6 +167,7 @@ class MQDimmer(Node):
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         new_level = min(self.dimmer + INC, FULL)
         self._set_dimmer_level(new_level)
+        self.reportCmd("BRT") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 
@@ -179,6 +182,7 @@ class MQDimmer(Node):
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         new_level = max(self.dimmer - INC, OFF)
         self._set_dimmer_level(new_level)
+        self.reportCmd("DIM") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 

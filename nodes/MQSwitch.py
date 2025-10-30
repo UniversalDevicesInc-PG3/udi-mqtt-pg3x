@@ -90,6 +90,7 @@ class MQSwitch(Node):
         """
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self.controller.mqtt_pub(self.cmd_topic, "ON")
+        self.reportCmd("DON") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 
@@ -103,6 +104,7 @@ class MQSwitch(Node):
         """
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self.controller.mqtt_pub(self.cmd_topic, "OFF")
+        self.reportCmd("DOF") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 

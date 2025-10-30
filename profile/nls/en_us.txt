@@ -76,9 +76,10 @@ PGM-CMD-SETLED-FMT = /R// Red ${v}/ /G// Green ${v}/ /B// Blue ${v}/ /I// Bright
 # flag
 ND-mqflag-NAME = MQTT FLAG
 ND-mqflag-ICON = GenericCtl
+ST-FLAG-ST-NAME = Flag Status
 CMD-FLAG-QUERY-NAME = Query
 CMD-FLAG-RESET-NAME = Reset
-ST-FLAG-ST-NAME = Flag Status
+CMD-FLAG-DON-NAME = Set
 FLAG-0 = OK
 FLAG-1 = NOK
 FLAG-2 = LO

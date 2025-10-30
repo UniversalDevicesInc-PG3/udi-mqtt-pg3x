@@ -52,7 +52,7 @@ PAYLOAD_MAP = {
     "OFF": 11,
     "---": 12,
 }
-DEFAULT_STATE = PAYLOAD_MAP["ERR"]
+ERROR_STATE = PAYLOAD_MAP["ERR"]
 
 
 class MQFlag(Node):
@@ -91,9 +91,10 @@ class MQFlag(Node):
 
         if state is None:
             LOGGER.error(f"Invalid payload received: {payload}")
-            state = DEFAULT_STATE
+            state = ERROR_STATE
         
         self.setDriver("ST", state)
+        self.reportCmd("DON") # report Setting, can be used in scenes
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
@@ -107,6 +108,7 @@ class MQFlag(Node):
         """
         LOGGER.info(f"{self.lpfx} {command}, {self.cmd_topic}")
         self.controller.mqtt_pub(self.cmd_topic, "RESET")
+        self.reportCmd("DOF") # report Resetting, can be used in scenes
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
