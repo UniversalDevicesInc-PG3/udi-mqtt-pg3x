@@ -88,7 +88,7 @@ class MQSwitch(Node):
         Args:
             command: The command dictionary from the ISY.
         """
-        LOGGER.info(f"{self.lpfx}, {command}")
+        LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self.controller.mqtt_pub(self.cmd_topic, "ON")
         LOGGER.debug("Exit")
 
@@ -101,7 +101,7 @@ class MQSwitch(Node):
         Args:
             command: The command dictionary from the ISY.
         """
-        LOGGER.info(f"{self.lpfx}, {command}")
+        LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self.controller.mqtt_pub(self.cmd_topic, "OFF")
         LOGGER.debug("Exit")
 
