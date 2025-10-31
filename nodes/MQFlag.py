@@ -126,6 +126,11 @@ class MQFlag(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
+    hint = '0x01010000'
+    # home, alarm, none
+    # Hints See: https://github.com/UniversalDevicesInc/hints
+
+
     # all the drivers - for reference
     drivers = [
         {"driver": "ST", "value": 0, "uom": 25}
