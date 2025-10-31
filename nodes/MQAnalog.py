@@ -1,81 +1,110 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025
 
 node MQAnalog
 
 General purpose Analog input using ADC.
 """
 
-import udi_interface
+# std libraries
 import json
 
-LOGGER = udi_interface.LOGGER
+# external libraries
+from udi_interface import Node, LOGGER
+
+# personal libraries
+pass
+
+# Constants
+DEFAULT_SENSOR_ID = 'SINGLE_SENSOR'
 
 
-class MQAnalog(udi_interface.Node):
+class MQAnalog(Node):
+    """Node representing a generic analog sensor from an MQTT device."""
     id = 'mqanal'
 
-    """
-    This is the class that all the Nodes will be represented by. You will
-    add this to Polyglot/ISY with the interface.addNode method.
-    """
-
     def __init__(self, polyglot, primary, address, name, device):
-        """
-        Super runs all the parent class necessities.
-        :param polyglot: Reference to the Interface class
-        :param primary: Parent address
-        :param address: This nodes address
-        :param name: This nodes name
+        """Initializes the MQAnalog node.
+
+        Args:
+            polyglot: Reference to the Polyglot interface.
+            primary: The address of the parent node.
+            address: The address of this node.
+            name: The name of this node.
+            device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
+        self.lpfx = f'{address}:{name}'
         self.cmd_topic = device["cmd_topic"]
-        if 'sensor_id' in device:
-            self.sensor_id = device['sensor_id']
-        else:
-            self.sensor_id = 'SINGLE_SENSOR'
-            device['sensor_id'] = self.sensor_id
-        LOGGER.debug(f'CMD_ID {self.sensor_id}, {self.cmd_topic}')
-        self.on = False
+        self.sensor_id = device.get('sensor_id', DEFAULT_SENSOR_ID)
 
-    def updateInfo(self, payload, topic: str):
+
+    def updateInfo(self, payload: str, topic: str):
+        """Updates the analog sensor value based on a JSON payload from MQTT.
+
+        Args:
+            payload: The JSON string received from the MQTT topic.
+            topic: The MQTT topic from which the message was received.
+        """
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
         try:
             data = json.loads(payload)
-        except Exception as ex:
-            LOGGER.error("Failed to parse MQTT Payload as Json: {} {}".format(ex, payload))
-            return False
-        LOGGER.debug(f'XXX {self.sensor_id}, {data} ')
+        except json.JSONDecodeError as e:
+            LOGGER.error(f"Could not decode JSON payload '{payload}': {e}")
+            return
+
+        # Handle Tasmota StatusSNS wrapper
         if 'StatusSNS' in data:
             data = data['StatusSNS']
-        if "ANALOG" in data:
-            self.setDriver("ST", 1)
-            LOGGER.debug(f'sensor_id UpdateInfo: {self.sensor_id}')
-            if self.sensor_id != 'SINGLE_SENSOR':
-                self.setDriver("GPV", data["ANALOG"][self.sensor_id])
-                LOGGER.info(f'M-analog {self.sensor_id}:  {data["ANALOG"][self.sensor_id]}')
-            else:
-                for key, value in data['ANALOG'].items():  # look for the ONLY reading inside 'ANALOG'
-                    LOGGER.info(f'single analog {key}: {value}')
-                    self.setDriver("GPV", value)
-        else:
-            LOGGER.debug(f'NOANALOG: {self.sensor_id}')
+
+        self._process_analog_data(data)
+        LOGGER.debug(f"{self.lpfx} Exit")
+
+
+    def _process_analog_data(self, data: dict):
+        """Parses the data dictionary for ANALOG readings and updates drivers."""
+        if "ANALOG" not in data or not isinstance(data["ANALOG"], dict):
+            LOGGER.debug(f'No ANALOG data found in payload: {data}')
             self.setDriver("ST", 0)
             self.setDriver("GPV", 0)
+            return
+
+        self.setDriver("ST", 1)
+        analog_data = data["ANALOG"]
+
+        if self.sensor_id != DEFAULT_SENSOR_ID:
+            try:
+                value = analog_data[self.sensor_id]
+                self.setDriver("GPV", value)
+                LOGGER.info(f'Multi-sensor analog {self.sensor_id}: {value}')
+            except KeyError:
+                LOGGER.error(f'Sensor ID "{self.sensor_id}" not found in ANALOG payload: {analog_data}')
+        else:
+            try:
+                # Assumes there is only one key-value pair for a single sensor device
+                key, value = next(iter(analog_data.items()))
+                self.setDriver("GPV", value)
+                LOGGER.info(f'Single-sensor analog {key}: {value}')
+            except StopIteration:
+                LOGGER.error(f'ANALOG data is empty, cannot read single sensor value: {analog_data}')
+
 
     def query(self, command=None):
+        """Handles the 'QUERY' command from ISY.
+
+        Sends a status request to the device.
         """
-        Called by ISY to report all drivers for this node. This is done in
-        the parent class, so you don't need to override this method unless
-        there is a need.
-        """
-        LOGGER.debug(f'QUERY: {self.sensor_id}')
+        LOGGER.info(f"{self.lpfx} {command}")
+        # Tasmota: 'Status 10' gets sensor readings
         query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
-        LOGGER.debug(f'QT: {query_topic}')
-        self.controller.mqtt_pub(query_topic, " 10")
+        self.controller.mqtt_pub(query_topic, "10")
+        LOGGER.debug(f'Query topic: {query_topic}')
         self.reportDrivers()
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     # all the drivers - for reference
     # GPV = "General Purpose Value"
@@ -84,6 +113,7 @@ class MQAnalog(udi_interface.Node):
         {"driver": "ST", "value": 0, "uom": 2, "name": "Analog ST"},
         {"driver": "GPV", "value": 0, "uom": 56, "name": "Analog"}
     ]
+
 
     """
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
