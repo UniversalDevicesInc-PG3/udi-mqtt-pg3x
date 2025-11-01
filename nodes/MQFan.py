@@ -1,89 +1,136 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025
 
 node MQFan
 """
 
-import udi_interface
+# std libraries
 import json
 
-LOGGER = udi_interface.LOGGER
+# external libraries
+from udi_interface import Node, LOGGER
 
-class MQFan(udi_interface.Node):
+# personal libraries
+pass
+
+# Constants
+FAN_OFF = 0
+FAN_LOW = 1
+FAN_MEDIUM = 2
+FAN_HIGH = 3
+FAN_MAX = 3
+
+
+class MQFan(Node):
+    """Node representing an MQTT-controlled fan with multiple speeds."""
     id = 'mqfan'
-    
-    """
-    This is the class that all the Nodes will be represented by. You will
-    add this to Polyglot/ISY with the interface.addNode method.
-    """
+
     def __init__(self, polyglot, primary, address, name, device):
-        """
-        Super runs all the parent class necessities.
-        :param polyglot: Reference to the Interface class
-        :param primary: Parent address
-        :param address: This nodes address
-        :param name: This nodes name
+        """Initializes the MQFan node.
+
+        Args:
+            polyglot: Reference to the Polyglot interface.
+            primary: The address of the parent node.
+            address: The address of this node.
+            name: The name of this node.
+            device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
+        self.lpfx = f'{address}:{name}'
         self.cmd_topic = device["cmd_topic"]
-        self.fan_speed = 0
+        self.fan_speed = FAN_OFF
 
-    def updateInfo(self, payload, topic: str):
-        fan_speed = 0
+
+    def updateInfo(self, payload: str, topic: str):
+        """Updates the fan speed based on a JSON payload from MQTT.
+
+        Args:
+            payload: The JSON string received from the MQTT topic.
+            topic: The MQTT topic from which the message was received.
+        """
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
         try:
-            json_payload = json.loads(payload)
-            fan_speed = int(json_payload['FanSpeed'])
-        except Exception as ex:
-            LOGGER.error(f"Could not decode payload {payload}: {ex}")
-        if 4 < fan_speed < 0:
-            LOGGER.error(f"Unexpected Fan Speed {fan_speed}")
+            data = json.loads(payload)
+            new_speed = int(data['FanSpeed'])
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            LOGGER.error(f"Could not decode payload or get FanSpeed: {e}")
             return
-        if self.fan_speed == 0 and fan_speed > 0:
+
+        if not (FAN_OFF <= new_speed <= FAN_MAX):
+            LOGGER.error(f"Received unexpected Fan Speed: {new_speed}")
+            return
+
+        if self.fan_speed == FAN_OFF and new_speed > FAN_OFF:
             self.reportCmd("DON")
-        if self.fan_speed > 0 and fan_speed == 0:
+        elif self.fan_speed > FAN_OFF and new_speed == FAN_OFF:
             self.reportCmd("DOF")
-        self.fan_speed = fan_speed
+        
+        self.fan_speed = new_speed
         self.setDriver("ST", self.fan_speed)
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def set_on(self, command):
+        """Handles the 'DON' command from ISY to set the fan speed."""
+        LOGGER.info(f"{self.lpfx} {command}")
         try:
-            self.fan_speed = int(command.get('value'))
-        except Exception as ex:
-            LOGGER.info(f"Unexpected Fan Speed {ex}, assuming High")
-            self.fan_speed = 3
-        if 4 < self.fan_speed < 0:
-            LOGGER.error(f"Unexpected Fan Speed {self.fan_speed}, assuming High")
-            self.fan_speed = 3
+            speed = int(command.get('value'))
+        except (ValueError, TypeError, AttributeError):
+            LOGGER.warning(f"Invalid or missing speed value in command, defaulting to HIGH: {command}")
+            speed = FAN_HIGH
+
+        if not (FAN_OFF <= speed <= FAN_MAX):
+            LOGGER.error(f"Received unexpected Fan Speed {speed}, defaulting to HIGH")
+            speed = FAN_HIGH
+        
+        self.fan_speed = speed
         self.setDriver("ST", self.fan_speed)
         self.controller.mqtt_pub(self.cmd_topic, self.fan_speed)
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def set_off(self, command):
-        self.fan_speed = 0
+        """Handles the 'DOF' command from ISY to turn the fan off."""
+        LOGGER.info(f"{self.lpfx} {command}")
+        self.fan_speed = FAN_OFF
         self.setDriver("ST", self.fan_speed)
         self.controller.mqtt_pub(self.cmd_topic, self.fan_speed)
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def speed_up(self, command):
+        """Handles the 'FDUP' command from ISY to increase fan speed."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, "+")
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def speed_down(self, command):
+        """Handles the 'FDDOWN' command from ISY to decrease fan speed."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, "-")
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def query(self, command=None):
+        """Handles the 'QUERY' command from ISY.
+
+        Requests the current state from the MQTT device.
         """
-        Called by ISY to report all drivers for this node. This is done in
-        the parent class, so you don't need to override this method unless
-        there is a need.
-        """
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, "")
         self.reportDrivers()
-        
+        LOGGER.debug(f"{self.lpfx} Exit")
+
+
     # all the drivers - for reference
     drivers = [
         {"driver": "ST", "value": 0, "uom": 25}
-        ]
+    ]
+
 
     """
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
@@ -97,5 +144,5 @@ class MQFan(udi_interface.Node):
         "FDDOWN": speed_down
     }
 
+
     hint = [4, 2, 0, 0]
-    

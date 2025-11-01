@@ -64,44 +64,55 @@ class MQDimmer(Node):
             topic: The MQTT topic from which the message was received.
         """
         LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
+        
         try:
             data = json.loads(payload)
             power = data.get("POWER")
-            new_dimmer = data.get("Dimmer")
+            new_dimmer_raw = data.get("Dimmer")
 
-            if new_dimmer is not None:
-                new_dimmer = int(new_dimmer)
-
-            LOGGER.info(f"Received update: Dimmer={new_dimmer}, Power={power}")
-
-            # If power state is provided, it takes precedence.
-            if power == "ON":
-                # If dimmer level is not specified on "ON", we might need to assume a level.
-                # Here we use the last known dimmer level if it was > 0, otherwise default to 100.
-                if new_dimmer is None:
-                    new_dimmer = self.dimmer if self.dimmer > OFF else FULL
-                self.reportCmd("DON")
-                self._set_dimmer_level(
-                    new_dimmer, report=False
-                )  # report=False to avoid double reporting DON
-            elif power == "OFF":
-                self.reportCmd("DOF")
-                self._set_dimmer_level(
-                    0, report=False
-                )  # report=False to avoid double reporting DOF
-
-            # If only dimmer level is provided
-            elif new_dimmer is not None:
-                if self.dimmer == OFF and new_dimmer > OFF:
-                    self.reportCmd("DON")
-                elif self.dimmer > OFF and new_dimmer == OFF:
-                    self.reportCmd("DOF")
-                self._set_dimmer_level(new_dimmer, report=False)
-
+            new_dimmer = None
+            if new_dimmer_raw is not None:
+                new_dimmer = int(new_dimmer_raw)
         except json.JSONDecodeError as e:
             LOGGER.error(f"Could not decode JSON payload '{payload}': {e}")
+            return
         except (ValueError, TypeError) as e:
             LOGGER.error(f"Error processing payload data '{payload}': {e}")
+            return
+
+        LOGGER.info(f"Received update: Dimmer={new_dimmer}, Power={power}")
+
+        # First, determine the target dimmer level based on all inputs.
+        target_level = new_dimmer
+        if power == "ON":
+            # If power is ON, the target is the new_dimmer level,
+            # or the last known level, or FULL if it was off.
+            if target_level is None:
+                target_level = self.dimmer if self.dimmer > OFF else FULL
+        elif power == "OFF":
+            target_level = OFF
+
+        # Exit if there's nothing to do.
+        if target_level is None or target_level == self.dimmer:
+            LOGGER.debug("No state change needed.")
+            return
+
+        # Next, determine the correct command to report based on the state change.
+        cmd = None
+        if self.dimmer == OFF and target_level > OFF:
+            cmd = "DON"
+        elif self.dimmer > OFF and target_level == OFF:
+            cmd = "DOF"
+        elif self.dimmer > OFF and target_level > self.dimmer:
+            cmd = "BRT"
+        elif self.dimmer > OFF and target_level < self.dimmer:
+            cmd = "DIM"
+
+        # Finally, report the command and apply the state change.
+        if cmd:
+            self.reportCmd(cmd)
+
+        self._set_dimmer_level(target_level, report=False)
         LOGGER.debug("Exit")
 
 
@@ -140,7 +151,6 @@ class MQDimmer(Node):
         if level == OFF:
             level = INC  # Default to INC(10%) if turning on with a level of OFF(0).
         self._set_dimmer_level(level)
-        self.reportCmd("DON") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 
@@ -152,7 +162,6 @@ class MQDimmer(Node):
         """
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self._set_dimmer_level(OFF)
-        self.reportCmd("DOF") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 
@@ -167,7 +176,6 @@ class MQDimmer(Node):
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         new_level = min(self.dimmer + INC, FULL)
         self._set_dimmer_level(new_level)
-        self.reportCmd("BRT") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 
@@ -182,7 +190,6 @@ class MQDimmer(Node):
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         new_level = max(self.dimmer - INC, OFF)
         self._set_dimmer_level(new_level)
-        self.reportCmd("DIM") # report Setting, can be used in scenes
         LOGGER.debug("Exit")
 
 

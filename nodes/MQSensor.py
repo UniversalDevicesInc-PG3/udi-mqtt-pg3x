@@ -107,7 +107,6 @@ class MQSensor(Node):
         """Handles the 'DON' command from ISY to turn the LED on."""
         LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"state": "ON"}))
-        self.reportCmd("DON") # report Setting, can be used in scenes
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
@@ -115,7 +114,6 @@ class MQSensor(Node):
         """Handles the 'DOF' command from ISY to turn the LED off."""
         LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"state": "OFF"}))
-        self.reportCmd("DOF") # report Setting, can be used in scenes
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
