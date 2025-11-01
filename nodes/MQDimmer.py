@@ -214,12 +214,12 @@ class MQDimmer(Node):
     # Hints See: https://github.com/UniversalDevicesInc/hints
 
 
-    """
-    This is an array of dictionary items containing the variable names(drivers)
-    values and uoms(units of measure) from ISY. This is how ISY knows what kind
-    of variable to display. Check the UOM's in the WSDK for a complete list.
-    UOM 2 is boolean so the ISY will display 'True/False'
-    """
+    # all the drivers - for reference
+    # UOMs of interest:
+    # 51: percent
+    #
+    # Driver controls of interest:
+    # ST: Status
     drivers = [
         {'driver': 'ST', 'value': OFF, 'uom': 51, 'name': "Status"},
     ]

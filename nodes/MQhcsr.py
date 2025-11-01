@@ -78,6 +78,13 @@ class MQhcsr(Node):
 
 
     # all the drivers - for reference
+    # UOMs of interest:
+    # 2: boolean
+    # 5: centimeter (cm)
+    #
+    # Driver controls of interest:
+    # ST: Status
+    # DISTANC: Distance
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "DISTANC", "value": 0, "uom": 5},

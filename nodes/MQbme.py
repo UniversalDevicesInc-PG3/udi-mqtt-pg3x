@@ -101,6 +101,18 @@ class MQbme(Node):
 
 
     # all the drivers - for reference
+    # UOMs of interest:
+    # 2: boolean
+    # 17: Fahrenheit (F)
+    # 22: relative humidity
+    # 23: inches of mercury (inHg)
+    #
+    # Driver controls of interest:
+    # ST: Status
+    # CLITEMP: Current Temperature
+    # CLIHUM: Humidity
+    # DEWPT: Dew Point
+    # BARPRES: Barometric Pressure
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
         {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},

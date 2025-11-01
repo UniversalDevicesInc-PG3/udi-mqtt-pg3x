@@ -86,6 +86,16 @@ class MQdht(Node):
 
 
     # all the drivers - for reference
+    # UOMs of interest:
+    # 2: boolean
+    # 17: Fahrenheit (F)
+    # 22: relative humidity
+    #
+    # Driver controls of interest:
+    # ST: Status
+    # CLITEMP: Current Temperature
+    # CLIHUM: Humidity
+    # DEWPT: Dew Point
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "AM2301 ST"},
         {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},

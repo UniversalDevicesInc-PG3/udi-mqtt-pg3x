@@ -120,6 +120,17 @@ class MQratgdo(udi_interface.Node):
         """
         self.reportDrivers()
         
+    # UOMs of interest:
+    # 2: boolean
+    # 25: index
+    #
+    # Driver controls of interest:
+    # ST: Status
+    # GV0: Custom Control 0
+    # GV1: Custom Control 1
+    # GV2: Custom Control 2
+    # GV3: Custom Control 3
+    # GV4: Custom Control 4
     # all the drivers - for reference
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},

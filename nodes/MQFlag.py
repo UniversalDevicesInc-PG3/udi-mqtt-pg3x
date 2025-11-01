@@ -132,6 +132,11 @@ class MQFlag(Node):
 
 
     # all the drivers - for reference
+    # UOMs of interest:
+    # 25: index
+    #
+    # Driver controls of interest:
+    # ST: Status
     drivers = [
         {"driver": "ST", "value": 0, "uom": 25}
     ]

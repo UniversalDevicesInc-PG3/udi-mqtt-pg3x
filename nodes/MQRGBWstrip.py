@@ -104,6 +104,20 @@ class MQRGBWstrip(udi_interface.Node):
         """
         self.reportDrivers()
         
+    # UOMs of interest:
+    # 2: boolean
+    # 78: 0-Off 100-On, 101-Unknown
+    # 100: A Level from 0-255
+    #
+    # Driver controls of interest:
+    # ST: Status
+    # GV0: Custom Control 0
+    # GV1: Custom Control 1
+    # GV2: Custom Control 2
+    # GV3: Custom Control 3
+    # GV4: Custom Control 4
+    # GV5: Custom Control 5
+    # GV6: Custom Control 6
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "GV0", "value": 0, "uom": 78},

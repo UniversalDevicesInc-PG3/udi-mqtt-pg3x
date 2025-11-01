@@ -107,8 +107,13 @@ class MQAnalog(Node):
 
 
     # all the drivers - for reference
-    # GPV = "General Purpose Value"
-    # UOM:56 = "The raw value reported by device"
+    # UOMs of interest:
+    # 2: boolean
+    # 56: The raw value as reported by the device
+    #
+    # Driver controls of interest:
+    # ST: Status
+    # GPV: General Purpose Value
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "Analog ST"},
         {"driver": "GPV", "value": 0, "uom": 56, "name": "Analog"}

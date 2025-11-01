@@ -96,6 +96,13 @@ class MQds(Node):
 
 
     # all the drivers - for reference
+    # UOMs of interest:
+    # 2: boolean
+    # 17: Fahrenheit (F)
+    #
+    # Driver controls of interest:
+    # ST: Status
+    # CLITEMP: Current Temperature
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "DS18B20 ST"},
         {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},

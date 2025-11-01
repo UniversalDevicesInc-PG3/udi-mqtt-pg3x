@@ -72,6 +72,13 @@ class MQraw(Node):
 
 
     # all the drivers - for reference
+    # UOMs of interest:
+    # 2: boolean
+    # 56: The raw value as reported by the device
+    #
+    # Driver controls of interest:
+    # ST: Status
+    # GV1: Custom Control 1
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "GV1", "value": 0, "uom": 56},
