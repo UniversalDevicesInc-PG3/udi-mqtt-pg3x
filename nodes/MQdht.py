@@ -1,7 +1,7 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025
 
 node MQdht
 
@@ -9,69 +9,82 @@ This class adds support for temperature/humidity/Dewpoint sensors.
 It was originally developed with an AM2301
 """
 
-import udi_interface
+# std libraries
 import json
 
-LOGGER = udi_interface.LOGGER
+# external libraries
+from udi_interface import Node, LOGGER
 
-class MQdht(udi_interface.Node):
+# personal libraries
+pass
+
+# Constants
+DEFAULT_SENSOR_ID = 'SINGLE_SENSOR'
+
+
+class MQdht(Node):
+    """Node representing a DHT-family environmental sensor."""
     id = 'mqdht'
-    
-    """
-    This is the class that all the Nodes will be represented by. You will
-    add this to Polyglot/ISY with the interface.addNode method.
-    """
+
     def __init__(self, polyglot, primary, address, name, device):
-        """
-        Super runs all the parent class necessities.
-        :param polyglot: Reference to the Interface class
-        :param primary: Parent address
-        :param address: This nodes address
-        :param name: This nodes name
+        """Initializes the MQdht node.
+
+        Args:
+            polyglot: Reference to the Polyglot interface.
+            primary: The address of the parent node.
+            address: The address of this node.
+            name: The name of this node.
+            device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        LOGGER.debug(f'DEVCLASS: {device} ')
+        self.lpfx = f'{address}:{name}'
         self.cmd_topic = device["cmd_topic"]
-        if 'sensor_id' in device:
-            self.sensor_id = device['sensor_id']
-        else:
-            self.sensor_id = 'SINGLE_SENSOR'
+        self.sensor_id = device.get('sensor_id', DEFAULT_SENSOR_ID)
+        # If sensor_id was not in device, add it for consistency.
+        if 'sensor_id' not in device:
             device['sensor_id'] = self.sensor_id
-        LOGGER.debug(f'CMD_ID {self.sensor_id}, {self.cmd_topic}')
-        self.on = False
 
-    def updateInfo(self, payload, topic: str):
+
+    def updateInfo(self, payload: str, topic: str):
+        """Updates sensor values based on a JSON payload from MQTT."""
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
         try:
             data = json.loads(payload)
-        except Exception as ex:
-            LOGGER.error("Failed to parse MQTT Payload as Json: {} {}".format(ex, payload))
-            return False
-        LOGGER.debug(f'ZZZ {self.sensor_id}, {data} ')
+        except json.JSONDecodeError as e:
+            LOGGER.error(f"Could not decode JSON payload '{payload}': {e}")
+            return
+
+        # Handle Tasmota StatusSNS wrapper
         if 'StatusSNS' in data:
             data = data['StatusSNS']
-        if self.sensor_id in data:
+
+        if self.sensor_id in data and isinstance(data[self.sensor_id], dict):
+            sensor_data = data[self.sensor_id]
             self.setDriver("ST", 1)
-            # self.setDriver("ERR", 0)
-            self.setDriver("CLITEMP", data[self.sensor_id]["Temperature"])
-            self.setDriver("CLIHUM", data[self.sensor_id]["Humidity"])
-            self.setDriver("DEWPT", data[self.sensor_id]["DewPoint"])
+            self.setDriver("CLITEMP", sensor_data.get("Temperature"))
+            self.setDriver("CLIHUM", sensor_data.get("Humidity"))
+            self.setDriver("DEWPT", sensor_data.get("DewPoint"))
         else:
             self.setDriver("ST", 0)
-            # self.setDriver("ERR", 1)
+        
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def query(self, command=None):
+        """Handles the 'QUERY' command from ISY.
+
+        Sends a status request to the device.
         """
-        Called by ISY to report all drivers for this node. This is done in
-        the parent class, so you don't need to override this method unless
-        there is a need.
-        """
-        LOGGER.debug(f'QUERY: {self.sensor_id}')
+        LOGGER.info(f"{self.lpfx} {command}")
+        # Tasmota: 'Status 10' gets sensor readings
         query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
-        LOGGER.debug(f'QT: {query_topic}')
-        self.controller.mqtt_pub(query_topic, " 10")
+        self.controller.mqtt_pub(query_topic, "10")
+        LOGGER.debug(f'Query topic: {query_topic}')
         self.reportDrivers()
-        
+        LOGGER.debug(f"{self.lpfx} Exit")
+
+
     # all the drivers - for reference
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "AM2301 ST"},
@@ -81,6 +94,7 @@ class MQdht(udi_interface.Node):
         # {"driver": "ERR", "value": 0, "uom": 2}
     ]
 
+
     """
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
     this tells it which method to call. DON calls setOn, etc.
@@ -88,4 +102,3 @@ class MQdht(udi_interface.Node):
     commands = {
         "QUERY": query,
     }
-
