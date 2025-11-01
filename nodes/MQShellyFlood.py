@@ -1,62 +1,85 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025
 
 node MQShellyFlood
 
-# Adding support for the Shelly Flood class of devices. Notably, Shellies publish their statuses on multiple
-# single-value topics, rather than a single topic with a JSON object for the status. You will need to pass
-# an array for the status_topic value in the JSON definition; see the POLYGLOT_CONFIG.md for details.
+Adding support for the Shelly Flood class of devices. Notably, Shellies publish
+their statuses on multiple single-value topics, rather than a single topic
+with a JSON object for the status. You will need to pass an array for the
+status_topic value in the JSON definition; see the POLYGLOT_CONFIG.md for
+details.
 """
 
-import udi_interface
+# std libraries
+pass
 
-LOGGER = udi_interface.LOGGER
+# external libraries
+from udi_interface import Node, LOGGER
 
-class MQShellyFlood(udi_interface.Node):
+# personal libraries
+pass
+
+# Constants
+TOPIC_MAP = {
+    "temperature": "CLITEMP",
+    "flood": "GV0",
+    "battery": "BATLVL",
+    "error": "GPV",
+}
+
+
+class MQShellyFlood(Node):
+    """Node representing a Shelly Flood sensor."""
     id = 'mqshflood'
-    
-    """
-    This is the class that all the Nodes will be represented by. You will
-    add this to Polyglot/ISY with the interface.addNode method.
-    """
+
     def __init__(self, polyglot, primary, address, name, device):
-        """
-        Super runs all the parent class necessities.
-        :param polyglot: Reference to the Interface class
-        :param primary: Parent address
-        :param address: This nodes address
-        :param name: This nodes name
+        """Initializes the MQShellyFlood node.
+
+        Args:
+            polyglot: Reference to the Polyglot interface.
+            primary: The address of the parent node.
+            address: The address of this node.
+            name: The name of this node.
+            device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
-        self.on = False
-        self.device = device
+        self.lpfx = f'{address}:{name}'
 
-    def updateInfo(self, payload, topic: str):
-        LOGGER.debug(f"Attempting to handle message for Shelly on topic {topic} with payload {payload}")
+
+    def updateInfo(self, payload: str, topic: str):
+        """Updates a specific driver based on the topic and payload from MQTT."""
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
+
         topic_suffix = topic.split('/')[-1]
-        self.setDriver("ST", 1)
-        if topic_suffix == "temperature":
-            self.setDriver("CLITEMP", payload)
-        elif topic_suffix == "flood":
-            value = payload == "true"
-            self.setDriver("GV0", value)
-        elif topic_suffix == "battery":
-            self.setDriver("BATLVL", payload)
-        elif topic_suffix == "error":
-            self.setDriver("GPV", payload)
+        driver = TOPIC_MAP.get(topic_suffix)
+
+        if driver:
+            # Special handling for the boolean 'flood' topic
+            if driver == "GV0":
+                value = 1 if payload.lower() == "true" else 0
+            else:
+                value = payload
+            
+            self.setDriver(driver, value)
+            self.setDriver("ST", 1)  # Report device is online
         else:
-            LOGGER.warn(f"Unable to handle data for topic {topic}")
+            LOGGER.warning(f"Unable to handle message on unknown topic suffix: {topic_suffix}")
+        
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def query(self, command=None):
+        """Handles the 'QUERY' command from ISY.
+
+        This is called by ISY to report all drivers for this node.
         """
-        Called by ISY to report all drivers for this node. This is done in
-        the parent class, so you don't need to override this method unless
-        there is a need.
-        """
+        LOGGER.info(f"{self.lpfx} {command}")
         self.reportDrivers()
-        
+        LOGGER.debug(f"{self.lpfx} Exit")
+
+
     # all the drivers - for reference
     # UOMs of interest:
     # 17 = degrees F (temp)
@@ -69,7 +92,6 @@ class MQShellyFlood(udi_interface.Node):
     # CLITEMP = current temperature
     # GPV = general purpose value
     # GV0 = custom control 0
-
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "CLITEMP", "value": 0, "uom": 17},  # Temperature sensor
@@ -78,6 +100,7 @@ class MQShellyFlood(udi_interface.Node):
         {"driver": "GPV", "value": 0, "uom": 56},  # error code
     ]
 
+
     """
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
     this tells it which method to call. DON calls setOn, etc.
@@ -85,4 +108,3 @@ class MQShellyFlood(udi_interface.Node):
     commands = {
         "QUERY": query,
     }
-
