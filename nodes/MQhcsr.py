@@ -1,65 +1,88 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025
 
 node MQhcsr
 
-# This class is an attempt to add support for HC-SR04 Ultrasonic Sensor.
-# Returns distance in centimeters.
+This class is an attempt to add support for HC-SR04 Ultrasonic Sensor.
+Returns distance in centimeters.
 """
 
-import udi_interface
+# std libraries
 import json
 
-LOGGER = udi_interface.LOGGER
+# external libraries
+from udi_interface import Node, LOGGER
 
-class MQhcsr(udi_interface.Node):
+# personal libraries
+pass
+
+# Constants
+SENSOR_KEY = 'SR04'
+
+
+class MQhcsr(Node):
+    """Node representing an HC-SR04 Ultrasonic Distance Sensor."""
     id = 'mqhcsr'
-    
-    """
-    This is the class that all the Nodes will be represented by. You will
-    add this to Polyglot/ISY with the interface.addNode method.
-    """
+
     def __init__(self, polyglot, primary, address, name, device):
-        """
-        Super runs all the parent class necessities.
-        :param polyglot: Reference to the Interface class
-        :param primary: Parent address
-        :param address: This nodes address
-        :param name: This nodes name
+        """Initializes the MQhcsr node.
+
+        Args:
+            polyglot: Reference to the Polyglot interface.
+            primary: The address of the parent node.
+            address: The address of this node.
+            name: The name of this node.
+            device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
-        self.on = False
+        self.lpfx = f'{address}:{name}'
 
-    def updateInfo(self, payload, topic: str):
+
+    def updateInfo(self, payload: str, topic: str):
+        """Updates sensor value based on a JSON payload from MQTT."""
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
         try:
             data = json.loads(payload)
-        except Exception as ex:
-            LOGGER.error(
-                "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
-            )
-            return False
-        if "SR04" in data:
-            self.setDriver("ST", 1)
-            self.setDriver("DISTANC", data["SR04"]["Distance"])
+        except json.JSONDecodeError as e:
+            LOGGER.error(f"Could not decode JSON payload '{payload}': {e}")
+            return
+
+        sensor_data = data.get(SENSOR_KEY)
+        if isinstance(sensor_data, dict):
+            distance = sensor_data.get("Distance")
+            if distance is not None:
+                self.setDriver("ST", 1)
+                self.setDriver("DISTANC", distance)
+            else:
+                LOGGER.warning(f"'Distance' key not found in sensor data: {sensor_data}")
+                self.setDriver("ST", 0)
+                self.setDriver("DISTANC", 0)
         else:
+            LOGGER.warning(f"Sensor key '{SENSOR_KEY}' not found in payload: {data}")
             self.setDriver("ST", 0)
             self.setDriver("DISTANC", 0)
+        
+        LOGGER.debug(f"{self.lpfx} Exit")
+
 
     def query(self, command=None):
+        """Handles the 'QUERY' command from ISY.
+
+        This is called by ISY to report all drivers for this node.
         """
-        Called by ISY to report all drivers for this node. This is done in
-        the parent class, so you don't need to override this method unless
-        there is a need.
-        """
+        LOGGER.info(f"{self.lpfx} {command}")
         self.reportDrivers()
-        
+        LOGGER.debug(f"{self.lpfx} Exit")
+
+
     # all the drivers - for reference
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "DISTANC", "value": 0, "uom": 5},
     ]
+
 
     """
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
@@ -68,4 +91,3 @@ class MQhcsr(udi_interface.Node):
     commands = {
         "QUERY": query,
     }
-
