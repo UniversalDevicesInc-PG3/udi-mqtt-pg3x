@@ -1,7 +1,7 @@
 """
 mqtt-poly-pg3x NodeServer/Plugin for EISY/Polisy
 
-(C) 2024
+(C) 2025
 
 node MQratgdo
 
@@ -9,129 +9,189 @@ Class for Ratgdo Garage door opener for MYQ replacement
 Able to control door, light, lock and get status of same as well as motion, obstruction
 """
 
-import udi_interface
+# std libraries
+pass
 
-LOGGER = udi_interface.LOGGER
+# external libraries
+from udi_interface import Node, LOGGER
 
-class MQratgdo(udi_interface.Node):
+# personal libraries
+pass
+
+# Constants
+DOOR_STATE_OPEN = 1
+DOOR_STATE_OPENING = 2
+DOOR_STATE_STOPPED = 3
+DOOR_STATE_CLOSING = 4
+DOOR_STATE_CLOSED = 0
+
+DOOR_PAYLOAD_MAP = {
+    "open": DOOR_STATE_OPEN,
+    "opening": DOOR_STATE_OPENING,
+    "stopped": DOOR_STATE_STOPPED,
+    "closing": DOOR_STATE_CLOSING,
+    "closed": DOOR_STATE_CLOSED,
+}
+
+
+class MQratgdo(Node):
+    """Node representing a Ratgdo Garage Door Opener."""
     id = 'mqratgdo'
-    
-    """
-    This is the class that all the Nodes will be represented by. You will
-    add this to Polyglot/ISY with the interface.addNode method.
-    """
+
     def __init__(self, polyglot, primary, address, name, device):
-        """
-        Super runs all the parent class necessities.
-        :param polyglot: Reference to the Interface class
-        :param primary: Parent address
-        :param address: This nodes address
-        :param name: This nodes name
+        """Initializes the MQratgdo node.
+
+        Args:
+            polyglot: Reference to the Polyglot interface.
+            primary: The address of the parent node.
+            address: The address of this node.
+            name: The name of this node.
+            device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
+        self.lpfx = f'{address}:{name}'
         self.cmd_topic = device["cmd_topic"] + "/command/"
-        self.poly.subscribe(self.poly.POLL, self.poll)
         self.device = device
-        self.motion = False
 
-    """
-    Called via the POLL event.  The POLL event is triggerd at
-    the intervals specified in the node server configuration. There
-    are two separate poll events, a long poll and a short poll. Which
-    one is indicated by the flag.  flag will hold the poll type either
-    'longPoll' or 'shortPoll'.
 
-    Use this if you want your node server to do something at fixed
-    intervals.
-    """
-    def poll(self, flag):
-        if 'longPoll' in flag:
-            LOGGER.debug('longPoll (controller)')
-        else:
-            LOGGER.debug('shortPoll (controller)')
-            if self.motion == True:
-                self.m_clear()
-
-    def updateInfo(self, payload, topic: str):
+    def updateInfo(self, payload: str, topic: str):
+        """Updates node drivers based on MQTT messages from the Ratgdo device."""
+        LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
         topic_suffix = topic.split('/')[-1]
-        if topic_suffix == "availability":
-            value = int(payload == "online")
-            self.setDriver("ST", value)
-        elif topic_suffix == "light":
-            value = int(payload == "on")
-            self.setDriver("GV0", value)
-        elif topic_suffix == "door":
-            if payload == "open":
-                value = 1
-            elif payload == "opening":
-                value = 2
-            elif payload == "stopped":
-                value = 3
-            elif payload == "closing":
-                value = 4
-            else:
-                value = 0
-            self.setDriver("GV1", value)
-        elif topic_suffix == "motion":
-            value = int(payload == "detected")
-            self.motion = (payload == 'detected')
-            self.setDriver("GV2", value)
-        elif topic_suffix == "lock":
-            value = int(payload == "locked")
-            self.setDriver("GV3", value)
-        elif topic_suffix == "obstruction":
-            value = int(payload == "obstructed")
-            self.setDriver("GV4", value)
+
+        handler = {
+            "availability": self._handle_availability,
+            "light": self._handle_light,
+            "door": self._handle_door,
+            "motion": self._handle_motion,
+            "lock": self._handle_lock,
+            "obstruction": self._handle_obstruction,
+        }.get(topic_suffix)
+
+        if handler:
+            handler(payload)
         else:
-            LOGGER.warn(f"Unable to handle data for topic {topic}")
+            LOGGER.warning(f"{self.lpfx} Unable to handle data for topic suffix: {topic_suffix}")
+        LOGGER.debug(f"{self.lpfx} Exit updateInfo")
+
+
+    def _handle_availability(self, payload: str):
+        """Handles availability status updates."""
+        value = 1 if payload == "online" else 0
+        self.setDriver("ST", value)
+
+
+    def _handle_light(self, payload: str):
+        """Handles light status updates."""
+        value = 1 if payload == "on" else 0
+        self.setDriver("GV0", value)
+
+
+    def _handle_door(self, payload: str):
+        """Handles door status updates."""
+        value = DOOR_PAYLOAD_MAP.get(payload, DOOR_STATE_CLOSED)
+        self.setDriver("GV1", value)
+
+
+    def _handle_motion(self, payload: str):
+        """Handles motion detection status updates."""
+        value = 1 if payload == "detected" else 0
+        # self.motion = (payload == 'detected') # self.motion removed
+        self.setDriver("GV2", value)
+
+
+    def _handle_lock(self, payload: str):
+        """Handles lock status updates."""
+        value = 1 if payload == "locked" else 0
+        self.setDriver("GV3", value)
+
+
+    def _handle_obstruction(self, payload: str):
+        """Handles obstruction status updates."""
+        value = 1 if payload == "obstructed" else 0
+        self.setDriver("GV4", value)
+
 
     def lt_on(self, command):
+        """Handles the 'DON' command to turn the light on."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic + "light", "on")
+        LOGGER.debug(f"{self.lpfx} Exit lt_on")
+
 
     def lt_off(self, command):
+        """Handles the 'DOF' command to turn the light off."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic + "light", "off")
+        LOGGER.debug(f"{self.lpfx} Exit lt_off")
+
 
     def dr_open(self, command):
+        """Handles the 'OPEN' command to open the garage door."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic + "door", "open")
+        LOGGER.debug(f"{self.lpfx} Exit dr_open")
+
 
     def dr_close(self, command):
+        """Handles the 'CLOSE' command to close the garage door."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic + "door", "close")
+        LOGGER.debug(f"{self.lpfx} Exit dr_close")
+
 
     def dr_stop(self, command):
+        """Handles the 'STOP' command to stop the garage door."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic + "door", "stop")
+        LOGGER.debug(f"{self.lpfx} Exit dr_stop")
+
 
     def lk_lock(self, command):
+        """Handles the 'LOCK' command to lock the garage door."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic + "lock", "lock")
+        LOGGER.debug(f"{self.lpfx} Exit lk_lock")
+
 
     def lk_unlock(self, command):
+        """Handles the 'UNLOCK' command to unlock the garage door."""
+        LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic + "lock", "unlock")
+        LOGGER.debug(f"{self.lpfx} Exit lk_unlock")
+
 
     def m_clear(self, command=None):
-        self.controller.mqtt_pub(self.device["status_topic"] + "/status/motion", "Clear")
+        """Handles the 'MCLEAR' command to clear motion status."""
+        LOGGER.info(f"{self.lpfx} {command}")
+        self.controller.mqtt_pub(self.cmd_topic.replace("/command/", "/status/") + "motion", "Clear")
         self.setDriver("GV2", 0)
-        self.motion = False
+        LOGGER.debug(f"{self.lpfx} Exit m_clear")
+
 
     def query(self, command=None):
+        """Handles the 'QUERY' command from ISY.
+
+        This is called by ISY to report all drivers for this node.
         """
-        Called by ISY to report all drivers for this node. This is done in
-        the parent class, so you don't need to override this method unless
-        there is a need.
-        """
+        LOGGER.info(f"{self.lpfx} {command}")
         self.reportDrivers()
+        LOGGER.debug(f"{self.lpfx} Exit query")
         
+
+    # all the drivers - for reference
     # UOMs of interest:
     # 2: boolean
     # 25: index
     #
     # Driver controls of interest:
     # ST: Status
-    # GV0: Custom Control 0
-    # GV1: Custom Control 1
-    # GV2: Custom Control 2
-    # GV3: Custom Control 3
-    # GV4: Custom Control 4
-    # all the drivers - for reference
+    # GV0: Custom Control 0, light
+    # GV1: Custom Control 1, door
+    # GV2: Custom Control 2, motion
+    # GV3: Custom Control 3, lock
+    # GV4: Custom Control 4, obstruction
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "GV0", "value": 0, "uom": 2},
@@ -140,6 +200,7 @@ class MQratgdo(udi_interface.Node):
         {"driver": "GV3", "value": 0, "uom": 2},
         {"driver": "GV4", "value": 0, "uom": 2},
     ]
+
 
     """
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
@@ -156,4 +217,3 @@ class MQratgdo(udi_interface.Node):
         "UNLOCK": lk_unlock,
         "MCLEAR": m_clear
         }
-    
