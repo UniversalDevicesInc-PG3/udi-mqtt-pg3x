@@ -126,9 +126,19 @@ class MQFan(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
-    # all the drivers - for reference
+    hint = '0x01040200'
+    # home, relay, on/off power strip
+    # Hints See: https://github.com/UniversalDevicesInc/hints
+
+
+    """
+    This is an array of dictionary items containing the variable names(drivers)
+    values and uoms(units of measure) from ISY. This is how ISY knows what kind
+    of variable to display. Check the UOM's in the WSDK for a complete list.
+    UOM 2 is boolean so the ISY will display 'True/False'
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 25}
+        {"driver": "ST", "value": FAN_OFF, "uom": 25, "name": "Power"}
     ]
 
 
@@ -143,6 +153,3 @@ class MQFan(Node):
         "FDUP": speed_up,
         "FDDOWN": speed_down
     }
-
-
-    hint = [4, 2, 0, 0]
