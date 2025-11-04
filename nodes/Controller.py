@@ -1412,16 +1412,24 @@ class Controller(Node):
         self.hb = not self.hb
         LOGGER.debug("Exit")
 
-
-    # Status that this node has. Should match the 'sts' section
-    # of the nodedef file.
+    """
+    UOMs:
+    25: index
+    107: Raw 1-byte unsigned value
+    
+    Driver controls:
+    ST: Status
+    GV0: Custom Control 0
+    """
     drivers = [
         {'driver': 'ST', 'value': 1, 'uom': 25, 'name': "Controller Status"},
         {'driver': 'GV0', 'value': 0, 'uom': 107, 'name': "NumberOfNodes"},
     ]
 
-    # Commands that this node can handle.  Should match the
-    # 'accepts' section of the nodedef file.
+    """
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
+    """
     commands = {
         'DISCOVER': discover_cmd,
         'QUERY': query,
