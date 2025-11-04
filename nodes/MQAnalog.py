@@ -106,14 +106,15 @@ class MQAnalog(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 2: boolean
-    # 56: The raw value as reported by the device
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # GPV: General Purpose Value
+    """
+    UOMs:
+    2: boolean
+    56: The raw value as reported by the device
+
+    Driver controls:
+    ST: Status (Analog ST)
+    GPV: General Purpose Value (Analog)
+    """
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "Analog ST"},
         {"driver": "GPV", "value": 0, "uom": 56, "name": "Analog"}
@@ -121,8 +122,8 @@ class MQAnalog(Node):
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

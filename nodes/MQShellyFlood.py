@@ -80,30 +80,32 @@ class MQShellyFlood(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 17 = degrees F (temp)
-    # 2 = boolean (flood)
-    # 51 = percent (battery)
-    # 56 = raw value from device (error)
-    #
-    # Driver controls of interest:
-    # BATLVL = battery level
-    # CLITEMP = current temperature
-    # GPV = general purpose value
-    # GV0 = custom control 0
+    """
+    UOMs:
+    17: Fahrenheit (F)
+    2: boolean
+    51: percent
+    56: The raw value as reported by the device
+
+    Driver controls:
+    ST: Status
+    CLITEMP: Current Temperature (Temperature)
+    GV0: Custom Control 0 (Flood)
+    BATLVL: Battery level (Battery Level)
+    GPV: General Purpose Value (Error)
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "CLITEMP", "value": 0, "uom": 17},  # Temperature sensor
-        {"driver": "GV0", "value": 0, "uom": 2},  # flood or not
-        {"driver": "BATLVL", "value": 0, "uom": 51},  # battery level indicator
-        {"driver": "GPV", "value": 0, "uom": 56},  # error code
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
+        {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},  # Temperature sensor
+        {"driver": "GV0", "value": 0, "uom": 2, "name": "Flood"},  # flood or not
+        {"driver": "BATLVL", "value": 0, "uom": 51, "name": "Battery Level"},  # battery level indicator
+        {"driver": "GPV", "value": 0, "uom": 56, "name": "Error"},  # error code
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

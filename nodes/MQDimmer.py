@@ -214,20 +214,21 @@ class MQDimmer(Node):
     # Hints See: https://github.com/UniversalDevicesInc/hints
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 51: percent
-    #
-    # Driver controls of interest:
-    # ST: Status
+    """
+    UOMs:
+    51: percent
+
+    Driver controls:
+    ST: Status (Status)
+    """
     drivers = [
         {'driver': 'ST', 'value': OFF, 'uom': 51, 'name': "Status"},
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

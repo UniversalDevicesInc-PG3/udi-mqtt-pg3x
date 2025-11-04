@@ -71,23 +71,24 @@ class MQraw(Node):
     # Hints See: https://github.com/UniversalDevicesInc/hints
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 2: boolean
-    # 56: The raw value as reported by the device
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # GV1: Custom Control 1
+    """
+    UOMs:
+    2: boolean
+    56: The raw value as reported by the device
+
+    Driver controls:
+    ST: Status
+    GV1: Custom Control 1 (Value)
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "GV1", "value": 0, "uom": 56},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
+        {"driver": "GV1", "value": 0, "uom": 56, "name": "Value"},
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

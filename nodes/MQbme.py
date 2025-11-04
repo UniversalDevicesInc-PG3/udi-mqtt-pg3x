@@ -100,31 +100,32 @@ class MQbme(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 2: boolean
-    # 17: Fahrenheit (F)
-    # 22: relative humidity
-    # 23: inches of mercury (inHg)
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # CLITEMP: Current Temperature
-    # CLIHUM: Humidity
-    # DEWPT: Dew Point
-    # BARPRES: Barometric Pressure
+    """
+    UOMs:
+    2: boolean
+    17: Fahrenheit (F)
+    22: relative humidity
+    23: inches of mercury (inHg)
+
+    Driver controls:
+    ST: Status (Status)
+    CLITEMP: Current Temperature (Temperature)
+    CLIHUM: Humidity (Humidity)
+    DEWPT: Dew Point (Dew Point)
+    BARPRES: Barometric Pressure (Barometric Pressure)
+    """
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
         {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},
         {"driver": "CLIHUM", "value": 0, "uom": 22, "name": "Humidity"},
         {"driver": "DEWPT", "value": 0, "uom": 17, "name": "Dew Point"},
-        {"driver": "BARPRES", "value": 0, "uom": 23},
+        {"driver": "BARPRES", "value": 0, "uom": 23, "name": "Barometric Pressure"},
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

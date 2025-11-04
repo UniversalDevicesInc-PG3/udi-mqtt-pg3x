@@ -77,23 +77,24 @@ class MQhcsr(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 2: boolean
-    # 5: centimeter (cm)
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # DISTANC: Distance
+    """
+    UOMs:
+    2: boolean
+    5: centimeter (cm)
+
+    Driver controls:
+    ST: Status
+    DISTANC: Distance
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "DISTANC", "value": 0, "uom": 5},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
+        {"driver": "DISTANC", "value": 0, "uom": 5, "name": "Distance"},
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

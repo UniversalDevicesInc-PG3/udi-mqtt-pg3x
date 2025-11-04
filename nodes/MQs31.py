@@ -73,35 +73,36 @@ class MQs31(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 1: ampere (amp)
-    # 2: boolean
-    # 33: kilowatts/hour (kWH)
-    # 53: Power Factor
-    # 72: volt
-    # 73: watt
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # CC: Current Current
-    # CPW: Current Power Used
-    # CV: Current Voltage
-    # PF: Power Factor
-    # TPW: Total Power Used
+    """
+    UOMs:
+    1: ampere (amp)
+    2: boolean
+    33: kilowatts/hour (kWH)
+    53: Power Factor
+    72: volt
+    73: watt
+
+    Driver controls:
+    ST: Status
+    CC: Current Current (Current)
+    CPW: Current Power Used (Power)
+    CV: Current Voltage (Voltage)
+    PF: Power Factor (Power Factor)
+    TPW: Total Power Used (Total Power)
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "CC", "value": 0.00, "uom": 1},
-        {"driver": "CPW", "value": 0, "uom": 73},
-        {"driver": "CV", "value": 0, "uom": 72},
-        {"driver": "PF", "value": 0.00, "uom": 53},
-        {"driver": "TPW", "value": 0.00, "uom": 33},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
+        {"driver": "CC", "value": 0.00, "uom": 1, "name": "Current"},
+        {"driver": "CPW", "value": 0, "uom": 73, "name": "Power"},
+        {"driver": "CV", "value": 0, "uom": 72, "name": "Voltage"},
+        {"driver": "PF", "value": 0.00, "uom": 53, "name": "Power Factor"},
+        {"driver": "TPW", "value": 0.00, "uom": 33, "name": "Total Power"},
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

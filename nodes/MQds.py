@@ -95,14 +95,15 @@ class MQds(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 2: boolean
-    # 17: Fahrenheit (F)
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # CLITEMP: Current Temperature
+    """
+    UOMs:
+    2: boolean
+    17: Fahrenheit (F)
+
+    Driver controls:
+    ST: Status (DS18B20 ST)
+    CLITEMP: Current Temperature (Temperature)
+    """
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2, "name": "DS18B20 ST"},
         {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},
@@ -110,8 +111,8 @@ class MQds(Node):
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

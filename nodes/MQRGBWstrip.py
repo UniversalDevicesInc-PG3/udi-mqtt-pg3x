@@ -132,36 +132,37 @@ class MQRGBWstrip(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
         
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 2: boolean
-    # 78: 0-Off 100-On, 101-Unknown
-    # 100: A Level from 0-255
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # GV0: Custom Control 0
-    # GV1: Custom Control 1
-    # GV2: Custom Control 2
-    # GV3: Custom Control 3
-    # GV4: Custom Control 4
-    # GV5: Custom Control 5
-    # GV6: Custom Control 6
+    """
+    UOMs:
+    2: boolean
+    78: 0-Off 100-On, 101-Unknown
+    100: A Level from 0-255
+
+    Driver controls:
+    ST: Status
+    GV0: Custom Control 0 (State)
+    GV1: Custom Control 1 (Brightness)
+    GV2: Custom Control 2 (Red)
+    GV3: Custom Control 3 (Green)
+    GV4: Custom Control 4 (Blue)
+    GV5: Custom Control 5 (White)
+    GV6: Custom Control 6 (Program)
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "GV0", "value": 0, "uom": 78},
-        {"driver": "GV1", "value": 0, "uom": 100},
-        {"driver": "GV2", "value": 0, "uom": 100},
-        {"driver": "GV3", "value": 0, "uom": 100},
-        {"driver": "GV4", "value": 0, "uom": 100},
-        {"driver": "GV5", "value": 0, "uom": 100},
-        {"driver": "GV6", "value": 0, "uom": 100},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
+        {"driver": "GV0", "value": 0, "uom": 78, "name": "State"},
+        {"driver": "GV1", "value": 0, "uom": 100, "name": "Brightness"},
+        {"driver": "GV2", "value": 0, "uom": 100, "name": "Red"},
+        {"driver": "GV3", "value": 0, "uom": 100, "name": "Green"},
+        {"driver": "GV4", "value": 0, "uom": 100, "name": "Blue"},
+        {"driver": "GV5", "value": 0, "uom": 100, "name": "White"},
+        {"driver": "GV6", "value": 0, "uom": 100, "name": "Program"},
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

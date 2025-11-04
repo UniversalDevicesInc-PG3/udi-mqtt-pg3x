@@ -180,31 +180,32 @@ class MQratgdo(Node):
         LOGGER.debug(f"{self.lpfx} Exit query")
         
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 2: boolean
-    # 25: index
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # GV0: Custom Control 0, light
-    # GV1: Custom Control 1, door
-    # GV2: Custom Control 2, motion
-    # GV3: Custom Control 3, lock
-    # GV4: Custom Control 4, obstruction
+    """
+    UOMs:
+    2: boolean
+    25: index
+
+    Driver controls:
+    ST: Status
+    GV0: Custom Control 0 (Light)
+    GV1: Custom Control 1 (Door)
+    GV2: Custom Control 2 (Motion)
+    GV3: Custom Control 3 (Lock)
+    GV4: Custom Control 4 (Obstruction)
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "GV0", "value": 0, "uom": 2},
-        {"driver": "GV1", "value": 0, "uom": 25},
-        {"driver": "GV2", "value": 0, "uom": 2},
-        {"driver": "GV3", "value": 0, "uom": 2},
-        {"driver": "GV4", "value": 0, "uom": 2},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
+        {"driver": "GV0", "value": 0, "uom": 2, "name": "Light"},
+        {"driver": "GV1", "value": 0, "uom": 25, "name": "Door"},
+        {"driver": "GV2", "value": 0, "uom": 2, "name": "Motion"},
+        {"driver": "GV3", "value": 0, "uom": 2, "name": "Lock"},
+        {"driver": "GV4", "value": 0, "uom": 2, "name": "Obstruction"},
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,

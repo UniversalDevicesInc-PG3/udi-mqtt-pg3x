@@ -163,43 +163,44 @@ class MQSensor(Node):
     # Hints See: https://github.com/UniversalDevicesInc/hints
 
 
-    # all the drivers - for reference
-    # UOMs of interest:
-    # 2: boolean
-    # 17: Fahrenheit (F)
-    # 22: relative humidity
-    # 36: lux
-    # 78: 0-Off 100-On, 101-Unknown
-    # 100: A Level from 0-255
-    #
-    # Driver controls of interest:
-    # ST: Status
-    # CLITEMP: Current Temperature
-    # GPV: General Purpose Value
-    # CLIHUM: Humidity
-    # LUMIN: Luminance
-    # GV0: Custom Control 0
-    # GV1: Custom Control 1
-    # GV2: Custom Control 2
-    # GV3: Custom Control 3
-    # GV4: Custom Control 4
+    """
+    UOMs:
+    2: boolean
+    17: Fahrenheit (F)
+    22: relative humidity
+    36: lux
+    78: 0-Off 100-On, 101-Unknown
+    100: A Level from 0-255
+
+    Driver controls:
+    ST: Status (Motion)
+    CLITEMP: Current Temperature (Temperature)
+    GPV: General Purpose Value (Heat Index)
+    CLIHUM: Humidity (Humidity)
+    LUMIN: Luminance (Luminance)
+    GV0: Custom Control 0 (LED State)
+    GV1: Custom Control 1 (LED Brightness)
+    GV2: Custom Control 2 (LED Red)
+    GV3: Custom Control 3 (LED Green)
+    GV4: Custom Control 4 (LED Blue)
+    """
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "CLITEMP", "value": 0, "uom": 17},
-        {"driver": "GPV", "value": 0, "uom": 17},
-        {"driver": "CLIHUM", "value": 0, "uom": 22},
-        {"driver": "LUMIN", "value": 0, "uom": 36},
-        {"driver": "GV0", "value": 0, "uom": 78},
-        {"driver": "GV1", "value": 0, "uom": 100},
-        {"driver": "GV2", "value": 0, "uom": 100},
-        {"driver": "GV3", "value": 0, "uom": 100},
-        {"driver": "GV4", "value": 0, "uom": 100},
+        {"driver": "ST", "value": 0, "uom": 2, "name": "Motion"},
+        {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},
+        {"driver": "GPV", "value": 0, "uom": 17, "name": "Heat Index"},
+        {"driver": "CLIHUM", "value": 0, "uom": 22, "name": "Humidity"},
+        {"driver": "LUMIN", "value": 0, "uom": 36, "name": "Luminance"},
+        {"driver": "GV0", "value": 0, "uom": 78, "name": "LED State"},
+        {"driver": "GV1", "value": 0, "uom": 100, "name": "LED Brightness"},
+        {"driver": "GV2", "value": 0, "uom": 100, "name": "LED Red"},
+        {"driver": "GV3", "value": 0, "uom": 100, "name": "LED Green"},
+        {"driver": "GV4", "value": 0, "uom": 100, "name": "LED Blue"},
     ]
 
 
     """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    Commands that this node can handle.
+    Should match the 'accepts' section of the nodedef file.
     """
     commands = {
         "QUERY": query,
