@@ -36,10 +36,10 @@ test:
 	pipenv run pytest
 
 coverage:
-	pipenv run pytest --cov=nodes --cov=utils --cov-report=term-missing
+	pipenv run pytest --cov=nodes --cov-report=term-missing
 
 coverage-html:
-	pipenv run pytest --cov=nodes --cov=utils --cov-report=html --cov-report=term-missing
+	pipenv run pytest --cov=nodes --cov-report=html --cov-report=term-missing
 	@echo ""
 	@echo "Coverage report generated! Open htmlcov/index.html in your browser."
 

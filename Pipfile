@@ -12,6 +12,7 @@ paho-mqtt = "~=2.1.0"
 pre-commit = "*"
 pytest = "*"
 pytest-cov = "*"
+pytest-tui = "*"
 
 [requires]
 python_version = "3.11"
