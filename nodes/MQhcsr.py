@@ -19,12 +19,13 @@ from udi_interface import Node, LOGGER
 pass
 
 # Constants
-SENSOR_KEY = 'SR04'
+SENSOR_KEY = "SR04"
 
 
 class MQhcsr(Node):
     """Node representing an HC-SR04 Ultrasonic Distance Sensor."""
-    id = 'mqhcsr'
+
+    id = "mqhcsr"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQhcsr node.
@@ -37,8 +38,7 @@ class MQhcsr(Node):
             device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
-        self.lpfx = f'{address}:{name}'
-
+        self.lpfx = f"{address}:{name}"
 
     def updateInfo(self, payload: str, topic: str):
         """Updates sensor value based on a JSON payload from MQTT."""
@@ -56,16 +56,17 @@ class MQhcsr(Node):
                 self.setDriver("ST", 1)
                 self.setDriver("DISTANC", distance)
             else:
-                LOGGER.warning(f"'Distance' key not found in sensor data: {sensor_data}")
+                LOGGER.warning(
+                    f"'Distance' key not found in sensor data: {sensor_data}"
+                )
                 self.setDriver("ST", 0)
                 self.setDriver("DISTANC", 0)
         else:
             LOGGER.warning(f"Sensor key '{SENSOR_KEY}' not found in payload: {data}")
             self.setDriver("ST", 0)
             self.setDriver("DISTANC", 0)
-        
-        LOGGER.debug(f"{self.lpfx} Exit")
 
+        LOGGER.debug(f"{self.lpfx} Exit")
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -75,7 +76,6 @@ class MQhcsr(Node):
         LOGGER.info(f"{self.lpfx} {command}")
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     """
     UOMs:
@@ -90,7 +90,6 @@ class MQhcsr(Node):
         {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
         {"driver": "DISTANC", "value": 0, "uom": 5, "name": "Distance"},
     ]
-
 
     """
     Commands that this node can handle.

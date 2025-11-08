@@ -1,6 +1,6 @@
 
 NAME = MQTT
-XML_FILES = profile/*/*.xml 
+XML_FILES = profile/*/*.xml
 
 .PHONY: all check clean format fulltest install lint test coverage coverage-html coverage-report zip
 

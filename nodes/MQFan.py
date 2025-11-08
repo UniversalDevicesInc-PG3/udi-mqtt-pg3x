@@ -25,7 +25,8 @@ FAN_MAX = 3
 
 class MQFan(Node):
     """Node representing an MQTT-controlled fan with multiple speeds."""
-    id = 'mqfan'
+
+    id = "mqfan"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQFan node.
@@ -39,10 +40,9 @@ class MQFan(Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
         self.fan_speed = FAN_OFF
-
 
     def updateInfo(self, payload: str, topic: str):
         """Updates the fan speed based on a JSON payload from MQTT.
@@ -54,7 +54,7 @@ class MQFan(Node):
         LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
         try:
             data = json.loads(payload)
-            new_speed = int(data['FanSpeed'])
+            new_speed = int(data["FanSpeed"])
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             LOGGER.error(f"Could not decode payload or get FanSpeed: {e}")
             return
@@ -67,30 +67,30 @@ class MQFan(Node):
             self.reportCmd("DON")
         elif self.fan_speed > FAN_OFF and new_speed == FAN_OFF:
             self.reportCmd("DOF")
-        
+
         self.fan_speed = new_speed
         self.setDriver("ST", self.fan_speed)
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     def set_on(self, command):
         """Handles the 'DON' command from ISY to set the fan speed."""
         LOGGER.info(f"{self.lpfx} {command}")
         try:
-            speed = int(command.get('value'))
+            speed = int(command.get("value"))
         except (ValueError, TypeError, AttributeError):
-            LOGGER.warning(f"Invalid or missing speed value in command, defaulting to HIGH: {command}")
+            LOGGER.warning(
+                f"Invalid or missing speed value in command, defaulting to HIGH: {command}"
+            )
             speed = FAN_HIGH
 
         if not (FAN_OFF <= speed <= FAN_MAX):
             LOGGER.error(f"Received unexpected Fan Speed {speed}, defaulting to HIGH")
             speed = FAN_HIGH
-        
+
         self.fan_speed = speed
         self.setDriver("ST", self.fan_speed)
         self.controller.mqtt_pub(self.cmd_topic, self.fan_speed)
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     def set_off(self, command):
         """Handles the 'DOF' command from ISY to turn the fan off."""
@@ -100,20 +100,17 @@ class MQFan(Node):
         self.controller.mqtt_pub(self.cmd_topic, self.fan_speed)
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
     def speed_up(self, command):
         """Handles the 'FDUP' command from ISY to increase fan speed."""
         LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, "+")
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
     def speed_down(self, command):
         """Handles the 'FDDOWN' command from ISY to decrease fan speed."""
         LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, "-")
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -125,11 +122,9 @@ class MQFan(Node):
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
-    hint = '0x01040200'
+    hint = "0x01040200"
     # home, relay, on/off power strip
     # Hints See: https://github.com/UniversalDevicesInc/hints
-
 
     """
     UOMs:
@@ -138,10 +133,7 @@ class MQFan(Node):
     Driver controls:
     ST: Status (Power)
     """
-    drivers = [
-        {"driver": "ST", "value": FAN_OFF, "uom": 25, "name": "Power"}
-    ]
-
+    drivers = [{"driver": "ST", "value": FAN_OFF, "uom": 25, "name": "Power"}]
 
     """
     Commands that this node can handle.
@@ -152,5 +144,5 @@ class MQFan(Node):
         "DON": set_on,
         "DOF": set_off,
         "FDUP": speed_up,
-        "FDDOWN": speed_down
+        "FDDOWN": speed_down,
     }

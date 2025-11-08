@@ -19,13 +19,14 @@ from udi_interface import Node, LOGGER
 pass
 
 # Constants
-DEFAULT_SENSOR_ID = 'SINGLE_SENSOR'
-FALLBACK_SENSOR_ID = 'DS18B20'
+DEFAULT_SENSOR_ID = "SINGLE_SENSOR"
+FALLBACK_SENSOR_ID = "DS18B20"
 
 
 class MQds(Node):
     """Node representing a DS18B20 temperature sensor."""
-    id = 'mqds'
+
+    id = "mqds"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQds node.
@@ -39,13 +40,12 @@ class MQds(Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
-        self.sensor_id = device.get('sensor_id', DEFAULT_SENSOR_ID)
+        self.sensor_id = device.get("sensor_id", DEFAULT_SENSOR_ID)
         # If sensor_id was not in device, add it for consistency.
-        if 'sensor_id' not in device:
-            device['sensor_id'] = self.sensor_id
-
+        if "sensor_id" not in device:
+            device["sensor_id"] = self.sensor_id
 
     def updateInfo(self, payload: str, topic: str):
         """Updates sensor values based on a JSON payload from MQTT."""
@@ -57,8 +57,8 @@ class MQds(Node):
             return
 
         # Handle Tasmota StatusSNS wrapper
-        if 'StatusSNS' in data:
-            data = data['StatusSNS']
+        if "StatusSNS" in data:
+            data = data["StatusSNS"]
 
         sensor_data = None
         if self.sensor_id in data:
@@ -72,14 +72,17 @@ class MQds(Node):
                 self.setDriver("ST", 1)
                 self.setDriver("CLITEMP", temp)
             else:
-                LOGGER.warning(f"'Temperature' key not found in sensor data: {sensor_data}")
+                LOGGER.warning(
+                    f"'Temperature' key not found in sensor data: {sensor_data}"
+                )
                 self.setDriver("ST", 0)
         else:
-            LOGGER.warning(f"No valid sensor data found for '{self.sensor_id}' or '{FALLBACK_SENSOR_ID}'")
+            LOGGER.warning(
+                f"No valid sensor data found for '{self.sensor_id}' or '{FALLBACK_SENSOR_ID}'"
+            )
             self.setDriver("ST", 0)
-        
-        LOGGER.debug(f"{self.lpfx} Exit")
 
+        LOGGER.debug(f"{self.lpfx} Exit")
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -88,12 +91,11 @@ class MQds(Node):
         """
         LOGGER.info(f"{self.lpfx} {command}")
         # Tasmota: 'Status 10' gets sensor readings
-        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        query_topic = self.cmd_topic.rsplit("/", 1)[0] + "/Status"
         self.controller.mqtt_pub(query_topic, "10")
-        LOGGER.debug(f'Query topic: {query_topic}')
+        LOGGER.debug(f"Query topic: {query_topic}")
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     """
     UOMs:
@@ -108,7 +110,6 @@ class MQds(Node):
         {"driver": "ST", "value": 0, "uom": 2, "name": "DS18B20 ST"},
         {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},
     ]
-
 
     """
     Commands that this node can handle.

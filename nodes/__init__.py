@@ -1,20 +1,18 @@
+"""Node classes used by the Python template Node Server."""
 
-""" Node classes used by the Python template Node Server. """
-
-from .MQSwitch        import MQSwitch
-from .MQDimmer        import MQDimmer
-from .MQFan           import MQFan
-from .MQSensor        import MQSensor
-from .MQFlag          import MQFlag
-from .MQdht           import MQdht
-from .MQds            import MQds
-from .MQbme           import MQbme
-from .MQhcsr          import MQhcsr
-from .MQShellyFlood   import MQShellyFlood
-from .MQAnalog        import MQAnalog
-from .MQs31           import MQs31
-from .MQraw           import MQraw
-from .MQRGBWstrip     import MQRGBWstrip
-from .MQratgdo        import MQratgdo
-from .Controller      import Controller
-
+from .MQSwitch import MQSwitch as MQSwitch
+from .MQDimmer import MQDimmer as MQDimmer
+from .MQFan import MQFan as MQFan
+from .MQSensor import MQSensor as MQSensor
+from .MQFlag import MQFlag as MQFlag
+from .MQdht import MQdht as MQdht
+from .MQds import MQds as MQds
+from .MQbme import MQbme as MQbme
+from .MQhcsr import MQhcsr as MQhcsr
+from .MQShellyFlood import MQShellyFlood as MQShellyFlood
+from .MQAnalog import MQAnalog as MQAnalog
+from .MQs31 import MQs31 as MQs31
+from .MQraw import MQraw as MQraw
+from .MQRGBWstrip import MQRGBWstrip as MQRGBWstrip
+from .MQratgdo import MQratgdo as MQratgdo
+from .Controller import Controller as Controller

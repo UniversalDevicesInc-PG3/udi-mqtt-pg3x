@@ -22,7 +22,7 @@ pass
 OFF = 0
 FULL = 100
 INC = 10
-DIMLOWERLIMIT = 10 # Dimmer, keep onlevel to a minimum level
+DIMLOWERLIMIT = 10  # Dimmer, keep onlevel to a minimum level
 
 
 class MQDimmer(Node):
@@ -32,6 +32,7 @@ class MQDimmer(Node):
     on/off control, brightness adjustments, and status reporting to the
     Polisy/ISY system.
     """
+
     id = "mqdimmer"
 
     def __init__(self, polyglot, primary, address, name, device):
@@ -47,11 +48,10 @@ class MQDimmer(Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
         self.status_topic = device["status_topic"]
         self.dimmer = OFF
-
 
     def updateInfo(self, payload: str, topic: str):
         """Updates the node's status based on incoming MQTT messages.
@@ -64,7 +64,7 @@ class MQDimmer(Node):
             topic: The MQTT topic from which the message was received.
         """
         LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
-        
+
         try:
             data = json.loads(payload)
             power = data.get("POWER")
@@ -115,7 +115,6 @@ class MQDimmer(Node):
         self._set_dimmer_level(target_level, report=False)
         LOGGER.debug("Exit")
 
-
     def _set_dimmer_level(self, level: int, report: bool = True):
         """Sets the dimmer level, updates the driver, and publishes to MQTT.
 
@@ -128,7 +127,6 @@ class MQDimmer(Node):
         self.setDriver("ST", self.dimmer)
         if report:
             self.controller.mqtt_pub(self.cmd_topic, self.dimmer)
-
 
     def on_cmd(self, command):
         """Handles the 'DON' command from ISY to turn the dimmer on.
@@ -153,7 +151,6 @@ class MQDimmer(Node):
         self._set_dimmer_level(level)
         LOGGER.debug("Exit")
 
-
     def off_cmd(self, command):
         """Handles the 'DOF' command from ISY to turn the dimmer off.
 
@@ -163,7 +160,6 @@ class MQDimmer(Node):
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self._set_dimmer_level(OFF)
         LOGGER.debug("Exit")
-
 
     def brt_cmd(self, command):
         """Handles the 'BRT' command from ISY to brighten the light.
@@ -178,7 +174,6 @@ class MQDimmer(Node):
         self._set_dimmer_level(new_level)
         LOGGER.debug("Exit")
 
-
     def dim_cmd(self, command):
         """Handles the 'DIM' command from ISY to dim the light.
 
@@ -191,7 +186,6 @@ class MQDimmer(Node):
         new_level = max(self.dimmer - INC, OFF)
         self._set_dimmer_level(new_level)
         LOGGER.debug("Exit")
-
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -208,11 +202,9 @@ class MQDimmer(Node):
         self.reportDrivers()
         LOGGER.debug("Exit")
 
-
-    hint = '0x01020900'
+    hint = "0x01020900"
     # home, controller, dimmer switch
     # Hints See: https://github.com/UniversalDevicesInc/hints
-
 
     """
     UOMs:
@@ -222,9 +214,8 @@ class MQDimmer(Node):
     ST: Status (Status)
     """
     drivers = [
-        {'driver': 'ST', 'value': OFF, 'uom': 51, 'name': "Status"},
+        {"driver": "ST", "value": OFF, "uom": 51, "name": "Status"},
     ]
-
 
     """
     Commands that this node can handle.

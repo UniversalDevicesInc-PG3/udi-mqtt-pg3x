@@ -18,7 +18,8 @@ pass
 
 class MQSensor(Node):
     """Node representing a multi-sensor MQTT device."""
-    id = 'mqsens'
+
+    id = "mqsens"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQSensor node.
@@ -32,10 +33,9 @@ class MQSensor(Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
         self.motion = False
-
 
     def updateInfo(self, payload: str, topic: str):
         """Updates all sensor values based on a JSON payload from MQTT.
@@ -56,7 +56,6 @@ class MQSensor(Node):
         self._update_led(data)
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
     def _update_motion(self, data: dict):
         """Updates the motion sensor driver based on payload data."""
         if "motion" in data:
@@ -73,7 +72,6 @@ class MQSensor(Node):
         else:
             self.setDriver("ST", 0)
 
-
     def _update_environment(self, data: dict):
         """Updates temperature, humidity, and light drivers based on payload data."""
         if "temperature" in data:
@@ -85,15 +83,14 @@ class MQSensor(Node):
         if "ldr" in data:
             self.setDriver("LUMIN", data["ldr"])
 
-
     def _update_led(self, data: dict):
         """Updates the LED drivers based on payload data."""
         if "state" in data:
             self.setDriver("GV0", 100 if data["state"] == "ON" else 0)
-        
+
         if "brightness" in data:
             self.setDriver("GV1", data["brightness"])
-        
+
         if "color" in data and isinstance(data["color"], dict):
             if "r" in data["color"]:
                 self.setDriver("GV2", data["color"]["r"])
@@ -102,20 +99,17 @@ class MQSensor(Node):
             if "b" in data["color"]:
                 self.setDriver("GV4", data["color"]["b"])
 
-
     def led_on(self, command):
         """Handles the 'DON' command from ISY to turn the LED on."""
         LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"state": "ON"}))
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
     def led_off(self, command):
         """Handles the 'DOF' command from ISY to turn the LED off."""
         LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"state": "OFF"}))
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     def led_set(self, command):
         """Handles the 'SETLED' command from ISY to set LED color and brightness."""
@@ -138,15 +132,13 @@ class MQSensor(Node):
             cmd["transition"] = transition
         if flash > 0:
             cmd["flash"] = flash
-        
+
         self.controller.mqtt_pub(self.cmd_topic, json.dumps(cmd))
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     def _check_limit(self, value: int) -> int:
         """Clamps a value between 0 and 255."""
         return max(0, min(255, value))
-
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -156,12 +148,10 @@ class MQSensor(Node):
         LOGGER.info(f"{self.lpfx} {command}")
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
-        
 
-    hint = '0x01030200'
+    hint = "0x01030200"
     # home, sensor, multilevel sensor
     # Hints See: https://github.com/UniversalDevicesInc/hints
-
 
     """
     UOMs:
@@ -197,14 +187,8 @@ class MQSensor(Node):
         {"driver": "GV4", "value": 0, "uom": 100, "name": "LED Blue"},
     ]
 
-
     """
     Commands that this node can handle.
     Should match the 'accepts' section of the nodedef file.
     """
-    commands = {
-        "QUERY": query,
-        "DON": led_on,
-        "DOF": led_off,
-        "SETLED": led_set
-    }
+    commands = {"QUERY": query, "DON": led_on, "DOF": led_off, "SETLED": led_set}

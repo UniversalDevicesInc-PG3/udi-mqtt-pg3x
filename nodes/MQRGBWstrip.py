@@ -26,7 +26,8 @@ COLOR_MAX_VALUE = 255
 
 class MQRGBWstrip(Node):
     """Node representing an RGBW LED strip controller."""
-    id = 'mqrgbw'
+
+    id = "mqrgbw"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQRGBWstrip node.
@@ -40,9 +41,8 @@ class MQRGBWstrip(Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
-
 
     def updateInfo(self, payload: str, topic: str):
         """Updates LED strip state based on a JSON payload from MQTT."""
@@ -56,7 +56,6 @@ class MQRGBWstrip(Node):
         self._update_led_state(data)
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
     def _update_led_state(self, data: dict):
         """Updates LED drivers based on parsed payload data."""
         if "state" in data:
@@ -66,20 +65,19 @@ class MQRGBWstrip(Node):
             else:
                 self.setDriver("GV0", LED_OFF_VALUE)
                 self.reportCmd("DOF")
-        
+
         if "br" in data:
             self.setDriver("GV1", data["br"])
-        
+
         color_data = data.get("c")
         if isinstance(color_data, dict):
             self.setDriver("GV2", color_data.get("r"))
             self.setDriver("GV3", color_data.get("g"))
             self.setDriver("GV4", color_data.get("b"))
             self.setDriver("GV5", color_data.get("w"))
-        
+
         if "pgm" in data:
             self.setDriver("GV6", data["pgm"])
-
 
     def led_on(self, command):
         """Handles the 'DON' command from ISY to turn the LED strip on."""
@@ -87,13 +85,11 @@ class MQRGBWstrip(Node):
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"state": "ON"}))
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
     def led_off(self, command):
         """Handles the 'DOF' command from ISY to turn the LED strip off."""
         LOGGER.info(f"{self.lpfx} {command}")
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"state": "OFF"}))
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     def rgbw_set(self, command):
         """Handles the 'SETRGBW' command from ISY to set RGBW values and program."""
@@ -105,7 +101,7 @@ class MQRGBWstrip(Node):
         white = self._check_limit(int(query.get("STRIPW.uom100", 0)))
         brightness = self._check_limit(int(query.get("STRIPI.uom100", 0)))
         program = self._check_limit(int(query.get("STRIPP.uom100", 0)))
-        
+
         cmd = {
             "state": "ON",
             "br": brightness,
@@ -116,11 +112,9 @@ class MQRGBWstrip(Node):
         self.controller.mqtt_pub(self.cmd_topic, json.dumps(cmd))
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
     def _check_limit(self, value: int) -> int:
         """Clamps a value between 0 and COLOR_MAX_VALUE."""
         return max(0, min(COLOR_MAX_VALUE, value))
-
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -130,7 +124,6 @@ class MQRGBWstrip(Node):
         LOGGER.info(f"{self.lpfx} {command}")
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
-        
 
     """
     UOMs:
@@ -159,14 +152,8 @@ class MQRGBWstrip(Node):
         {"driver": "GV6", "value": 0, "uom": 100, "name": "Program"},
     ]
 
-
     """
     Commands that this node can handle.
     Should match the 'accepts' section of the nodedef file.
     """
-    commands = {
-        "QUERY": query,
-        "DON": led_on,
-        "DOF": led_off,
-        "SETRGBW": rgbw_set
-    }
+    commands = {"QUERY": query, "DON": led_on, "DOF": led_off, "SETRGBW": rgbw_set}

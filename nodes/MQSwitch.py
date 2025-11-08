@@ -20,6 +20,7 @@ OFF = 0
 ON = 100
 UNKNOWN = 101
 
+
 class MQSwitch(Node):
     """
     Represents a generic MQTT switch device in the ISY system.
@@ -28,7 +29,8 @@ class MQSwitch(Node):
     payloads to control its state. It reports its power status (On/Off)
     to the ISY controller.
     """
-    id = 'MQSW'
+
+    id = "MQSW"
 
     def __init__(self, polyglot, primary: str, address: str, name: str, device: dict):
         """
@@ -46,8 +48,7 @@ class MQSwitch(Node):
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
         self.on_state = False  # Tracks the on/off state of the switch.
-        self.lpfx = f'{address}:{name}'
-
+        self.lpfx = f"{address}:{name}"
 
     def updateInfo(self, payload: str, topic: str):
         """
@@ -79,7 +80,6 @@ class MQSwitch(Node):
             return
         LOGGER.debug("Exit")
 
-
     def cmd_on(self, command: dict):
         """
         Handles the 'DON' command from the ISY controller to send ON command.
@@ -92,7 +92,6 @@ class MQSwitch(Node):
         self.controller.mqtt_pub(self.cmd_topic, "ON")
         LOGGER.debug("Exit")
 
-
     def cmd_off(self, command: dict):
         """
         Handles the 'DOF' command from the ISY controller to send OFF command.
@@ -104,7 +103,6 @@ class MQSwitch(Node):
         LOGGER.info(f"{self.lpfx}, {command}, {self.cmd_topic}")
         self.controller.mqtt_pub(self.cmd_topic, "OFF")
         LOGGER.debug("Exit")
-
 
     def query(self, command: Optional[dict] = None):
         """
@@ -122,11 +120,9 @@ class MQSwitch(Node):
         self.reportDrivers()
         LOGGER.debug("Exit")
 
-
-    hint = '0x01040200'
+    hint = "0x01040200"
     # home, relay, on/off power strip
     # Hints See: https://github.com/UniversalDevicesInc/hints
-
 
     """
     UOMs:
@@ -135,11 +131,8 @@ class MQSwitch(Node):
     Driver controls:
     ST: Status (Power)
     """
-    drivers = [
-        {"driver": "ST", "value": OFF, "uom": 78, "name": "Power"}
-    ]
+    drivers = [{"driver": "ST", "value": OFF, "uom": 78, "name": "Power"}]
 
-    
     """
     Commands that this node can handle.
     Should match the 'accepts' section of the nodedef file.
@@ -147,6 +140,5 @@ class MQSwitch(Node):
     commands = {
         "DON": cmd_on,
         "DOF": cmd_off,
-        'QUERY': query,
+        "QUERY": query,
     }
-

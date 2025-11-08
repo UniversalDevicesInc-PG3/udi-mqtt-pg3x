@@ -7,8 +7,8 @@ This Plugin provides an interface between an MQTT broker and the [Polyglot PG3][
 [This thread][forum] on UDI forums has more details, ask questions there.
 
 ## MQTT Broker
-If you are on PG3 or PG3X on eISY the broker is already running by default 
- 
+If you are on PG3 or PG3X on eISY the broker is already running by default
+
 If you are on Polisy or running Polyglot on an RPi, see post #1 in [this thread][sonoff] on how to set up.
 
 ### Custom Parameters
@@ -30,7 +30,7 @@ mqtt_port     - (default = 1884)
 mqtt_user     - (default = admin)
 mqtt_password - (default = admin)
 
-## OPTIONAL TOPIC PREFIX PARAMS WILL REPLACE TILD ~ AT START OF TOPICS 
+## OPTIONAL TOPIC PREFIX PARAMS WILL REPLACE TILD ~ AT START OF TOPICS
 status_prefix - (default = None)
 cmd_prefix - (default = None)
 ```
@@ -38,11 +38,11 @@ cmd_prefix - (default = None)
 #### `devlist example` - JSON list of devices & status/command topics note format & space between '[' and '{'
 
 ```json
-[  {"id": "sonoff1", "type": "switch", 
-        "status_topic":  "stat/sonoff1/POWER", 
-        "cmd_topic":  "cmnd/sonoff1/power"},  
-    {"id":  "sonoff2",  "type":  "switch", 
-        "status_topic":  "stat/sonoff2/POWER",  
+[  {"id": "sonoff1", "type": "switch",
+        "status_topic":  "stat/sonoff1/POWER",
+        "cmd_topic":  "cmnd/sonoff1/power"},
+    {"id":  "sonoff2",  "type":  "switch",
+        "status_topic":  "stat/sonoff2/POWER",
         "cmd_topic":  "cmnd/sonoff2/power"}  ]
 ```
 #
@@ -99,14 +99,14 @@ Note the topic (Wemos32) is the same for all sensors on the same device. The 'id
 
 ### `"id":`
 
-ISY node ID - Can be anything you like, but ISY restricts to alphanumeric  
+ISY node ID - Can be anything you like, but ISY restricts to alphanumeric
 characters only and underline, no special characters, **maximum 14 characters**
 
 ### `"type":`
 
 A device-type needs to be defined for by using of the following:
 
-<u>Tasmota-flashed CONTROL Devices:</u> 
+<u>Tasmota-flashed CONTROL Devices:</u>
 - **switch** - For basic sonoff or generic switch.
 - **dimmer** - Smart Wi-Fi Light Dimmer Switch, [**See Amazon**][dimmer]. Use:
 ```
@@ -139,19 +139,19 @@ The 'sensor name' can be found by examining an MQTT message in the Web console o
 
 ### `"status_topic":`
 
-- For switch this will be the cmnd topic (like `cmnd/sonoff1/POWER`), 
-- For sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`).  
+- For switch this will be the cmnd topic (like `cmnd/sonoff1/POWER`),
+- For sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`).
 - For Shelly Floods, this will be an array, like:
 ```json
-[ "shellies/shellyflood-<unique-id>/sensor/temperature", 
-   "shellies/shellyflood-<unique-id>/sensor/flood" ]  
+[ "shellies/shellyflood-<unique-id>/sensor/temperature",
+   "shellies/shellyflood-<unique-id>/sensor/flood" ]
 ```
 (they usually also have a `battery` and `error` topic that follow the same pattern).
 
 ### `"cmd_topic":`
 
-- Is always required, even if the type doesn't support it (like a sensor)  
-Just enter a generic topic (`cmnd/sensor/power`).  
+- Is always required, even if the type doesn't support it (like a sensor)
+Just enter a generic topic (`cmnd/sensor/power`).
 
 [license]: https://img.shields.io/github/license/mashape/apistatus.svg
 [localLicense]: https://github.com/Trilife/udi-mqtt-pg3x/blob/main/LICENSE

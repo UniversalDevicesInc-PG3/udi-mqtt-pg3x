@@ -20,12 +20,13 @@ pass
 
 # Constants
 HPA_TO_INHG = 0.02952998751
-DEFAULT_SENSOR_ID = 'SINGLE_SENSOR'
+DEFAULT_SENSOR_ID = "SINGLE_SENSOR"
 
 
 class MQbme(Node):
     """Node representing a BME280 environmental sensor."""
-    id = 'mqbme'
+
+    id = "mqbme"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQbme node.
@@ -39,13 +40,12 @@ class MQbme(Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
-        self.sensor_id = device.get('sensor_id', DEFAULT_SENSOR_ID)
+        self.sensor_id = device.get("sensor_id", DEFAULT_SENSOR_ID)
         # If sensor_id was not in device, add it for consistency.
-        if 'sensor_id' not in device:
-            device['sensor_id'] = self.sensor_id
-
+        if "sensor_id" not in device:
+            device["sensor_id"] = self.sensor_id
 
     def updateInfo(self, payload: str, topic: str):
         """Updates sensor values based on a JSON payload from MQTT."""
@@ -57,8 +57,8 @@ class MQbme(Node):
             return
 
         # Handle Tasmota StatusSNS wrapper
-        if 'StatusSNS' in data:
-            data = data['StatusSNS']
+        if "StatusSNS" in data:
+            data = data["StatusSNS"]
 
         if self.sensor_id in data and isinstance(data[self.sensor_id], dict):
             sensor_data = data[self.sensor_id]
@@ -66,16 +66,15 @@ class MQbme(Node):
             self.setDriver("CLITEMP", sensor_data.get("Temperature"))
             self.setDriver("CLIHUM", sensor_data.get("Humidity"))
             self.setDriver("DEWPT", sensor_data.get("DewPoint"))
-            
+
             if "Pressure" in sensor_data:
                 pressure_hg = self._convert_pressure(sensor_data["Pressure"])
                 if pressure_hg is not None:
                     self.setDriver("BARPRES", pressure_hg)
         else:
             self.setDriver("ST", 0)
-        
-        LOGGER.debug(f"{self.lpfx} Exit")
 
+        LOGGER.debug(f"{self.lpfx} Exit")
 
     def _convert_pressure(self, hpa_pressure) -> float | None:
         """Converts pressure from hPa to inHg."""
@@ -85,7 +84,6 @@ class MQbme(Node):
             LOGGER.error(f"Could not convert pressure value '{hpa_pressure}': {e}")
             return None
 
-
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
 
@@ -93,12 +91,11 @@ class MQbme(Node):
         """
         LOGGER.info(f"{self.lpfx} {command}")
         # Tasmota: 'Status 10' gets sensor readings
-        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        query_topic = self.cmd_topic.rsplit("/", 1)[0] + "/Status"
         self.controller.mqtt_pub(query_topic, "10")
-        LOGGER.debug(f'Query topic: {query_topic}')
+        LOGGER.debug(f"Query topic: {query_topic}")
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     """
     UOMs:
@@ -121,7 +118,6 @@ class MQbme(Node):
         {"driver": "DEWPT", "value": 0, "uom": 17, "name": "Dew Point"},
         {"driver": "BARPRES", "value": 0, "uom": 23, "name": "Barometric Pressure"},
     ]
-
 
     """
     Commands that this node can handle.

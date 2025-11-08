@@ -19,12 +19,13 @@ from udi_interface import Node, LOGGER
 pass
 
 # Constants
-DEFAULT_SENSOR_ID = 'SINGLE_SENSOR'
+DEFAULT_SENSOR_ID = "SINGLE_SENSOR"
 
 
 class MQdht(Node):
     """Node representing a DHT-family environmental sensor."""
-    id = 'mqdht'
+
+    id = "mqdht"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQdht node.
@@ -38,13 +39,12 @@ class MQdht(Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
-        self.sensor_id = device.get('sensor_id', DEFAULT_SENSOR_ID)
+        self.sensor_id = device.get("sensor_id", DEFAULT_SENSOR_ID)
         # If sensor_id was not in device, add it for consistency.
-        if 'sensor_id' not in device:
-            device['sensor_id'] = self.sensor_id
-
+        if "sensor_id" not in device:
+            device["sensor_id"] = self.sensor_id
 
     def updateInfo(self, payload: str, topic: str):
         """Updates sensor values based on a JSON payload from MQTT."""
@@ -56,8 +56,8 @@ class MQdht(Node):
             return
 
         # Handle Tasmota StatusSNS wrapper
-        if 'StatusSNS' in data:
-            data = data['StatusSNS']
+        if "StatusSNS" in data:
+            data = data["StatusSNS"]
 
         if self.sensor_id in data and isinstance(data[self.sensor_id], dict):
             sensor_data = data[self.sensor_id]
@@ -67,9 +67,8 @@ class MQdht(Node):
             self.setDriver("DEWPT", sensor_data.get("DewPoint"))
         else:
             self.setDriver("ST", 0)
-        
-        LOGGER.debug(f"{self.lpfx} Exit")
 
+        LOGGER.debug(f"{self.lpfx} Exit")
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -78,12 +77,11 @@ class MQdht(Node):
         """
         LOGGER.info(f"{self.lpfx} {command}")
         # Tasmota: 'Status 10' gets sensor readings
-        query_topic = self.cmd_topic.rsplit('/', 1)[0] + '/Status'
+        query_topic = self.cmd_topic.rsplit("/", 1)[0] + "/Status"
         self.controller.mqtt_pub(query_topic, "10")
-        LOGGER.debug(f'Query topic: {query_topic}')
+        LOGGER.debug(f"Query topic: {query_topic}")
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     """
     UOMs:
@@ -104,7 +102,6 @@ class MQdht(Node):
         {"driver": "DEWPT", "value": 0, "uom": 17, "name": "Dew Point"},
         # {"driver": "ERR", "value": 0, "uom": 2}
     ]
-
 
     """
     Commands that this node can handle.

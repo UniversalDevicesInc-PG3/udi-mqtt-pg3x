@@ -15,9 +15,12 @@ import sys
 # external libraries
 import udi_interface
 
+# local imports
+from nodes import Controller
+
 LOGGER = udi_interface.LOGGER
 
-VERSION = '0.50.0'
+VERSION = "0.50.0"
 
 """
 0.50.0
@@ -29,7 +32,7 @@ DONE add numofnodes
 DONE: fixed typos in POLYGLOT_CONFIG.md
 STARTED: Organize device types according to Tasmota, Sensor etc.
 TODO: Reorganize sample devfile for clarity and comments
- 
+
 0.40.2
 DONE README.md clean-up
 DONE POLYGLOT_CONFIG.md clean-up
@@ -73,8 +76,6 @@ DONE fix adding & removal of nodes during start-up and/or discovery
 
 """
 
-from nodes import Controller
-
 if __name__ == "__main__":
     polyglot = None
     try:
@@ -100,7 +101,7 @@ if __name__ == "__main__":
         * use 'controller' for both parent and address and PG3 will be able
           to automatically update node server status
         """
-        control = Controller(polyglot, 'mqctrl', 'mqctrl', 'MQTT')
+        control = Controller(polyglot, "mqctrl", "mqctrl", "MQTT")
 
         """
         Sits around and does nothing forever, keeping your program running.
@@ -117,9 +118,5 @@ if __name__ == "__main__":
         if polyglot is not None:
             polyglot.stop()
     except Exception as err:
-        LOGGER.error('Exception: {0}'.format(err), exc_info=True)
+        LOGGER.error("Exception: {0}".format(err), exc_info=True)
     sys.exit(0)
-
-
-
-

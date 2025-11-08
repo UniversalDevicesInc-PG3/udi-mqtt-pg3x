@@ -27,14 +27,8 @@ Example device: liquid float {OK, LO, HI}
 Example condition: IOT device sensor connections {OK, NOK, ERR(OR)}
 """
 
-# std libraries
-pass
-
 # external libraries
 from udi_interface import Node, LOGGER
-
-# personal libraries
-pass
 
 # Constants
 PAYLOAD_MAP = {
@@ -61,7 +55,8 @@ class MQFlag(Node):
     This class receives simple string payloads (e.g., "OK", "ERR") from an
     MQTT topic and maps them to a numerical state in the Polisy/ISY system.
     """
-    id = 'mqflag'
+
+    id = "mqflag"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQFlag node.
@@ -75,9 +70,8 @@ class MQFlag(Node):
         """
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
-
 
     def updateInfo(self, payload, topic: str):
         """Updates the node's status based on incoming MQTT messages.
@@ -92,15 +86,14 @@ class MQFlag(Node):
         if state is None:
             LOGGER.error(f"Invalid payload received: {payload}")
             state = ERROR_STATE
-        
-        self.setDriver("ST", state)
-        self.reportCmd("DON") # report Setting, can be used in scenes
-        LOGGER.debug(f"{self.lpfx} Exit")
 
+        self.setDriver("ST", state)
+        self.reportCmd("DON")  # report Setting, can be used in scenes
+        LOGGER.debug(f"{self.lpfx} Exit")
 
     def reset_send(self, command):
         """Handles the 'RESET' command from ISY.
-        
+
         Publishes 'RESET' to the command topic.
 
         Args:
@@ -108,9 +101,8 @@ class MQFlag(Node):
         """
         LOGGER.info(f"{self.lpfx} {command}, {self.cmd_topic}")
         self.controller.mqtt_pub(self.cmd_topic, "RESET")
-        self.reportCmd("DOF") # report Resetting, can be used in scenes
+        self.reportCmd("DOF")  # report Resetting, can be used in scenes
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -125,11 +117,9 @@ class MQFlag(Node):
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
-    hint = '0x01010000'
+    hint = "0x01010000"
     # home, alarm, none
     # Hints See: https://github.com/UniversalDevicesInc/hints
-
 
     """
     UOMs:
@@ -138,16 +128,10 @@ class MQFlag(Node):
     Driver controls:
     ST: Status
     """
-    drivers = [
-        {"driver": "ST", "value": 0, "uom": 25, "name": "Status"}
-    ]
-
+    drivers = [{"driver": "ST", "value": 0, "uom": 25, "name": "Status"}]
 
     """
     Commands that this node can handle.
     Should match the 'accepts' section of the nodedef file.
     """
-    commands = {
-        "QUERY": query,
-        "RESET": reset_send
-    }
+    commands = {"QUERY": query, "RESET": reset_send}

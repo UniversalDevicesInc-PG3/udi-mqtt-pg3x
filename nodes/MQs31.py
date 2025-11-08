@@ -18,12 +18,13 @@ from udi_interface import Node, LOGGER
 pass
 
 # Constants
-SENSOR_KEY = 'ENERGY'
+SENSOR_KEY = "ENERGY"
 
 
 class MQs31(Node):
     """Node representing a Sonoff S31 Power Monitoring Plug."""
-    id = 'mqs31'
+
+    id = "mqs31"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQs31 node.
@@ -36,8 +37,7 @@ class MQs31(Node):
             device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
-        self.lpfx = f'{address}:{name}'
-
+        self.lpfx = f"{address}:{name}"
 
     def updateInfo(self, payload: str, topic: str):
         """Updates all sensor values based on a JSON payload from MQTT."""
@@ -59,9 +59,8 @@ class MQs31(Node):
         else:
             LOGGER.warning(f"Sensor key '{SENSOR_KEY}' not found in payload: {data}")
             self.setDriver("ST", 0)
-        
-        LOGGER.debug(f"{self.lpfx} Exit")
 
+        LOGGER.debug(f"{self.lpfx} Exit")
 
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
@@ -71,7 +70,6 @@ class MQs31(Node):
         LOGGER.info(f"{self.lpfx} {command}")
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
-
 
     """
     UOMs:
@@ -98,7 +96,6 @@ class MQs31(Node):
         {"driver": "PF", "value": 0.00, "uom": 53, "name": "Power Factor"},
         {"driver": "TPW", "value": 0.00, "uom": 33, "name": "Total Power"},
     ]
-
 
     """
     Commands that this node can handle.

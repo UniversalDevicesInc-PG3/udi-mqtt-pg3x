@@ -8,19 +8,14 @@ node MQraw
 This node is for a device that sends a raw integer value.
 """
 
-# std libraries
-pass
-
 # external libraries
 from udi_interface import Node, LOGGER
-
-# personal libraries
-pass
 
 
 class MQraw(Node):
     """Node representing a device that sends a raw integer value."""
-    id = 'mqr'
+
+    id = "mqr"
 
     def __init__(self, polyglot, primary, address, name, device):
         """Initializes the MQraw node.
@@ -33,9 +28,8 @@ class MQraw(Node):
             device: Dictionary containing device-specific information.
         """
         super().__init__(polyglot, primary, address, name)
-        self.lpfx = f'{address}:{name}'
+        self.lpfx = f"{address}:{name}"
         self.cmd_topic = device["cmd_topic"]
-
 
     def updateInfo(self, payload: str, topic: str):
         """Updates the node drivers based on a raw payload from MQTT.
@@ -55,7 +49,6 @@ class MQraw(Node):
             self.setDriver("GV1", 0)
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
     def query(self, command=None):
         """Handles the 'QUERY' command from ISY.
 
@@ -65,11 +58,9 @@ class MQraw(Node):
         self.reportDrivers()
         LOGGER.debug(f"{self.lpfx} Exit")
 
-
-    hint = '0x01030200'
+    hint = "0x01030200"
     # home, sensor, multilevel sensor
     # Hints See: https://github.com/UniversalDevicesInc/hints
-
 
     """
     UOMs:
@@ -84,7 +75,6 @@ class MQraw(Node):
         {"driver": "ST", "value": 0, "uom": 2, "name": "Status"},
         {"driver": "GV1", "value": 0, "uom": 56, "name": "Value"},
     ]
-
 
     """
     Commands that this node can handle.
