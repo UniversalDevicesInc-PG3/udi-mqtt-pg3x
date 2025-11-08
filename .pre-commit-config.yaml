@@ -1,0 +1,52 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+# To run tests before you push instead of before you commit (recommended if tests are slow),
+# uncomment stages line and run `pre-commit install --hook-type pre-push`
+# To run manually on all files `pre-commit run --all-files
+
+repos:
+  # Standard hooks for file formatting
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-xml
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+
+  # Extremely fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+        args: [--fix] # Automatically fix what it can
+      - id: ruff-format
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        exclude: '^\.envrc$'
+
+  # Local hook to run your test suite
+  - repo: local
+    hooks:
+      - id: pytest
+        name: Run test suite
+        entry: pipenv run pytest
+        language: system
+        types: [python]
+        pass_filenames: false # Always run the full suite
+        # To run tests before you push instead of before you commit (recommended if tests are slow),
+        # uncomment the following line and run `pre-commit install --hook-type pre-push`
+        stages: [pre-push]
