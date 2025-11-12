@@ -57,9 +57,7 @@ class TestMQbmeInitialization:
         controller = Mock()
         mock_polyglot.getNode.return_value = controller
 
-        bme = MQbme(
-            mock_polyglot, "controller", "bme_1", "BME Sensor", device_config
-        )
+        _bme = MQbme(mock_polyglot, "controller", "bme_1", "BME Sensor", device_config)
 
         assert device_config["sensor_id"] == DEFAULT_SENSOR_ID
 
@@ -139,9 +137,7 @@ class TestMQbmeUpdateInfo:
         bme.setDriver.assert_any_call("CLIHUM", 50.0)
         bme.setDriver.assert_any_call("DEWPT", 52.0)
         # Should not set BARPRES
-        assert not any(
-            call[0][0] == "BARPRES" for call in bme.setDriver.call_args_list
-        )
+        assert not any(call[0][0] == "BARPRES" for call in bme.setDriver.call_args_list)
 
     def test_update_info_tasmota_statussns_wrapper(self, bme):
         """Test handling Tasmota StatusSNS wrapper."""

@@ -57,7 +57,7 @@ class TestMQdsInitialization:
         controller = Mock()
         mock_polyglot.getNode.return_value = controller
 
-        ds = MQds(mock_polyglot, "controller", "ds_1", "DS Sensor", device_config)
+        _ds = MQds(mock_polyglot, "controller", "ds_1", "DS Sensor", device_config)
 
         assert device_config["sensor_id"] == DEFAULT_SENSOR_ID
 

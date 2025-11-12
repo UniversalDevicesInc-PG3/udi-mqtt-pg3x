@@ -1,0 +1,13 @@
+# markdownlint-cli2 configuration
+# See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+config:
+  # MD013: Line length - keep disabled for flexibility with links and code blocks
+  MD013: false
+
+# Ignore patterns
+ignores:
+  - "node_modules/"
+  - ".git/"
+  - "htmlcov/"
+  - "*.pyc"

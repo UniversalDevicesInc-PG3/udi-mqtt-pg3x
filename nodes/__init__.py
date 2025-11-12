@@ -15,4 +15,5 @@ from .MQs31 import MQs31 as MQs31
 from .MQraw import MQraw as MQraw
 from .MQRGBWstrip import MQRGBWstrip as MQRGBWstrip
 from .MQratgdo import MQratgdo as MQratgdo
+from .MQDroplet import MQDroplet as MQDroplet
 from .Controller import Controller as Controller

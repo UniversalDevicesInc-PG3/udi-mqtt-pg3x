@@ -111,4 +111,20 @@
         <range uom="2" subset="0,1" nls="GOBST" />
     </editor>
 
+    <editor id="DSERVER">
+        <range uom="25" subset="0,1,2" nls="DSERVER" />
+    </editor>
+
+    <editor id="DSIGNAL">
+        <range uom="25" subset="0,1,2,3" nls="DSIGNAL" />
+    </editor>
+
+    <editor id="VOLUME">
+        <range uom="35" min="0" max="1000" prec="3" />
+    </editor>
+
+    <editor id="FLOW">
+        <range uom="130" min="0" max="6000" prec="2" />
+    </editor>
+
 </editors>

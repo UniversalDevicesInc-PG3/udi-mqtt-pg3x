@@ -37,9 +37,7 @@ class TestMQFlagInitialization:
         controller = Mock()
         mock_polyglot.getNode.return_value = controller
 
-        flag = MQFlag(
-            mock_polyglot, "controller", "flag_1", "Test Flag", device_config
-        )
+        flag = MQFlag(mock_polyglot, "controller", "flag_1", "Test Flag", device_config)
 
         assert flag.id == "mqflag"
         assert flag.address == "flag_1"

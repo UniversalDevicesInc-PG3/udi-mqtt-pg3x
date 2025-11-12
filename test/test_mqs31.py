@@ -70,15 +70,17 @@ class TestMQs31UpdateInfo:
 
     def test_update_info_complete_energy_data(self, s31_node):
         """Test handling complete energy data payload."""
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 1.5,
-                "Power": 180.0,
-                "Voltage": 120.0,
-                "Factor": 0.95,
-                "Total": 12.5
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 1.5,
+                    "Power": 180.0,
+                    "Voltage": 120.0,
+                    "Factor": 0.95,
+                    "Total": 12.5,
+                }
             }
-        })
+        )
 
         s31_node.updateInfo(payload, "test/s31/state")
 
@@ -94,12 +96,7 @@ class TestMQs31UpdateInfo:
 
     def test_update_info_partial_energy_data(self, s31_node):
         """Test handling partial energy data (some fields missing)."""
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 0.8,
-                "Power": 96.0
-            }
-        })
+        payload = json.dumps({"ENERGY": {"Current": 0.8, "Power": 96.0}})
 
         s31_node.updateInfo(payload, "test/s31/state")
 
@@ -115,15 +112,17 @@ class TestMQs31UpdateInfo:
 
     def test_update_info_zero_values(self, s31_node):
         """Test handling zero energy values (device off)."""
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 0.0,
-                "Power": 0,
-                "Voltage": 120.0,
-                "Factor": 0.0,
-                "Total": 15.3
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 0.0,
+                    "Power": 0,
+                    "Voltage": 120.0,
+                    "Factor": 0.0,
+                    "Total": 15.3,
+                }
             }
-        })
+        )
 
         s31_node.updateInfo(payload, "test/s31/state")
 
@@ -197,15 +196,17 @@ class TestMQs31UpdateInfo:
 
     def test_update_info_high_power_values(self, s31_node):
         """Test handling high power consumption values."""
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 15.0,
-                "Power": 1800.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 1234.56
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 15.0,
+                    "Power": 1800.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 1234.56,
+                }
             }
-        })
+        )
 
         s31_node.updateInfo(payload, "test/s31/state")
 
@@ -215,15 +216,17 @@ class TestMQs31UpdateInfo:
 
     def test_update_info_low_power_factor(self, s31_node):
         """Test handling low power factor."""
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 2.0,
-                "Power": 100.0,
-                "Voltage": 120.0,
-                "Factor": 0.42,
-                "Total": 5.0
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 2.0,
+                    "Power": 100.0,
+                    "Voltage": 120.0,
+                    "Factor": 0.42,
+                    "Total": 5.0,
+                }
             }
-        })
+        )
 
         s31_node.updateInfo(payload, "test/s31/state")
 
@@ -232,17 +235,19 @@ class TestMQs31UpdateInfo:
 
     def test_update_info_extra_fields_ignored(self, s31_node):
         """Test that extra fields in payload are ignored."""
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 1.0,
-                "Power": 120.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 10.0,
-                "ExtraField": "ignored"
-            },
-            "Time": "2025-01-01T12:00:00"
-        })
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 1.0,
+                    "Power": 120.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 10.0,
+                    "ExtraField": "ignored",
+                },
+                "Time": "2025-01-01T12:00:00",
+            }
+        )
 
         s31_node.updateInfo(payload, "test/s31/state")
 
@@ -348,15 +353,17 @@ class TestMQs31Integration:
         s31 = full_setup
 
         # Device off
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 0.0,
-                "Power": 0,
-                "Voltage": 120.0,
-                "Factor": 0.0,
-                "Total": 10.0
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 0.0,
+                    "Power": 0,
+                    "Voltage": 120.0,
+                    "Factor": 0.0,
+                    "Total": 10.0,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/tele/SENSOR")
 
         assert s31.setDriver.call_args_list[0] == (("ST", 1),)
@@ -365,15 +372,17 @@ class TestMQs31Integration:
         s31.setDriver.reset_mock()
 
         # Device on - load detected
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 5.0,
-                "Power": 600.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 10.5
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 5.0,
+                    "Power": 600.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 10.5,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/tele/SENSOR")
 
         assert s31.setDriver.call_args_list[2] == (("CPW", 600.0),)
@@ -384,30 +393,34 @@ class TestMQs31Integration:
         s31 = full_setup
 
         # Initial reading
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 2.0,
-                "Power": 240.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 5.0
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 2.0,
+                    "Power": 240.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 5.0,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/tele/SENSOR")
 
         assert s31.setDriver.call_args_list[1] == (("CC", 2.0),)
         s31.setDriver.reset_mock()
 
         # Updated reading - power increased
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 3.5,
-                "Power": 420.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 5.1
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 3.5,
+                    "Power": 420.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 5.1,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/tele/SENSOR")
 
         assert s31.setDriver.call_args_list[1] == (("CC", 3.5),)
@@ -418,15 +431,17 @@ class TestMQs31Integration:
         s31 = full_setup
 
         # Update with data
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 1.0,
-                "Power": 120.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 2.0
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 1.0,
+                    "Power": 120.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 2.0,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/state")
 
         # Query current state
@@ -439,15 +454,17 @@ class TestMQs31Integration:
         s31 = full_setup
 
         # Valid data
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 1.0,
-                "Power": 120.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 1.0
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 1.0,
+                    "Power": 120.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 1.0,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/state")
         assert s31.setDriver.call_args_list[0] == (("ST", 1),)
 
@@ -461,15 +478,17 @@ class TestMQs31Integration:
         s31.setDriver.reset_mock()
 
         # Recovery
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 1.0,
-                "Power": 120.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 1.1
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 1.0,
+                    "Power": 120.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 1.1,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/state")
         assert s31.setDriver.call_args_list[0] == (("ST", 1),)
 
@@ -478,29 +497,33 @@ class TestMQs31Integration:
         s31 = full_setup
 
         # Day 1
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 1.0,
-                "Power": 120.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 0.5
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 1.0,
+                    "Power": 120.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 0.5,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/state")
         assert s31.setDriver.call_args_list[5] == (("TPW", 0.5),)
 
         s31.setDriver.reset_mock()
 
         # Day 7
-        payload = json.dumps({
-            "ENERGY": {
-                "Current": 1.0,
-                "Power": 120.0,
-                "Voltage": 120.0,
-                "Factor": 1.0,
-                "Total": 20.16
+        payload = json.dumps(
+            {
+                "ENERGY": {
+                    "Current": 1.0,
+                    "Power": 120.0,
+                    "Voltage": 120.0,
+                    "Factor": 1.0,
+                    "Total": 20.16,
+                }
             }
-        })
+        )
         s31.updateInfo(payload, "home/s31/state")
         assert s31.setDriver.call_args_list[5] == (("TPW", 20.16),)

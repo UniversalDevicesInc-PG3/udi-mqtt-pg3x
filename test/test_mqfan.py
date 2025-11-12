@@ -52,9 +52,7 @@ class TestMQFanInitialization:
         controller = Mock()
         mock_polyglot.getNode.return_value = controller
 
-        fan = MQFan(
-            mock_polyglot, "controller", "fan_1", "Test Fan", device_config
-        )
+        fan = MQFan(mock_polyglot, "controller", "fan_1", "Test Fan", device_config)
 
         mock_polyglot.getNode.assert_called_once_with("controller")
         assert fan.controller == controller

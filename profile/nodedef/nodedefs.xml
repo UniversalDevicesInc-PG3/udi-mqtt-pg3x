@@ -310,4 +310,23 @@
             </accepts>
         </cmds>
     </nodeDef>
+    <nodeDef id="mqdroplet" nls="DROPLET">
+        <editors />
+        <sts>
+            <st id="ST" editor="DSERVER" />
+            <st id="GV0" editor="DSIGNAL" />
+            <st id="GV1" editor="BOOL" />
+            <st id="WVOL" editor="VOLUME" />
+            <st id="WATERF" editor="FLOW" />
+        </sts>
+        <cmds>
+            <sends>
+                <cmd id="DON" />
+                <cmd id="DOF" />
+            </sends>
+            <accepts>
+                <cmd id="QUERY" />
+            </accepts>
+        </cmds>
+    </nodeDef>
 </nodeDefs>

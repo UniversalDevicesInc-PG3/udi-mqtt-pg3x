@@ -47,7 +47,11 @@ class TestMQhcsrInitialization:
     def test_initialization_different_name(self, mock_polyglot, device_config):
         """Test initialization with different name."""
         hcsr = MQhcsr(
-            mock_polyglot, "controller", "garage_sensor", "Garage Distance", device_config
+            mock_polyglot,
+            "controller",
+            "garage_sensor",
+            "Garage Distance",
+            device_config,
         )
 
         assert hcsr.lpfx == "garage_sensor:Garage Distance"
@@ -203,10 +207,12 @@ class TestMQhcsrUpdateInfo:
 
     def test_update_info_extra_fields_ignored(self, hcsr_node):
         """Test that extra fields in payload are ignored."""
-        payload = json.dumps({
-            "SR04": {"Distance": 75, "ExtraField": "ignored", "Other": 999},
-            "Time": "2025-01-01T12:00:00"
-        })
+        payload = json.dumps(
+            {
+                "SR04": {"Distance": 75, "ExtraField": "ignored", "Other": 999},
+                "Time": "2025-01-01T12:00:00",
+            }
+        )
 
         hcsr_node.updateInfo(payload, "test/hcsr/state")
 

@@ -238,3 +238,22 @@ GLOCK-1 = Locked
 ONOFF-0 = Off
 ONOFF-1 = On
 ONOFF-100 = On
+
+# droplet
+ND-mqdroplet-NAME = MQTT Droplet
+ND-mqdroplet-ICON = WaterMeter
+ST-DROPLET-ST-NAME = Server Status
+ST-DROPLET-GV0-NAME = Signal Quality
+ST-DROPLET-GV1-NAME = Health Status
+ST-DROPLET-WVOL-NAME = Water Volume
+ST-DROPLET-WATERF-NAME = Flow Rate
+CMD-DROPLET-QUERY-NAME = Query
+
+DSERVER-0 = Connected
+DSERVER-1 = Connecting
+DSERVER-2 = Disconnected
+
+DSIGNAL-0 = Initializing
+DSIGNAL-1 = No Signal
+DSIGNAL-2 = Weak Signal
+DSIGNAL-3 = Strong Signal

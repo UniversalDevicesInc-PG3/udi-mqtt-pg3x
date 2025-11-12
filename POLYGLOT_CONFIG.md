@@ -7,6 +7,7 @@ This Plugin provides an interface between an MQTT broker and the [Polyglot PG3][
 [This thread][forum] on UDI forums has more details, ask questions there.
 
 ## MQTT Broker
+
 If you are on PG3 or PG3X on eISY the broker is already running by default
 
 If you are on Polisy or running Polyglot on an RPi, see post #1 in [this thread][sonoff] on how to set up.
@@ -15,7 +16,7 @@ If you are on Polisy or running Polyglot on an RPi, see post #1 in [this thread]
 
 You will need to define the following custom parameters in Parameters OR in devfile:
 
-```
+```text
 ## ONE OF THE BELOW IS REQUIRED (see below for example of each)
 
 You can mix and match, Parameters & devlist will add to or overwrite devfile.
@@ -34,7 +35,7 @@ mqtt_password - (default = admin)
 status_prefix - (default = None)
 cmd_prefix - (default = None)
 ```
-#
+
 #### `devlist example` - JSON list of devices & status/command topics note format & space between '[' and '{'
 
 ```json
@@ -45,7 +46,7 @@ cmd_prefix - (default = None)
         "status_topic":  "stat/sonoff2/POWER",
         "cmd_topic":  "cmnd/sonoff2/power"}  ]
 ```
-#
+
 #### `devfile example` - YAML file stored on EISY of devices & topics
 
 ```yaml
@@ -95,6 +96,7 @@ devices:
   status_topic: "~/POWER"
   cmd_topic: "~/"
 ```
+
 Note the topic (Wemos32) is the same for all sensors on the same device. The 'id' and 'name' can be different
 
 ### `"id":`
@@ -106,22 +108,30 @@ characters only and underline, no special characters, **maximum 14 characters**
 
 A device-type needs to be defined for by using of the following:
 
-<u>Tasmota-flashed CONTROL Devices:</u>
+#### Tasmota-flashed CONTROL Devices
+
 - **switch** - For basic sonoff or generic switch.
 - **dimmer** - Smart Wi-Fi Light Dimmer Switch, [**See Amazon**][dimmer]. Use:
-```
+
+```text
 cmd_topic: "cmnd/topic/dimmer"
 status_topic: "stat/topic/DIMMER"
 ```
+
 (not .../power and ../POWER)
+
 - **flag** - For your device to send a condition to ISY {OK,NOK,LO,HI,ERR,IN,OUT,UP,DOWN,TRIGGER,ON,OFF,---}
 - **ifan** - [**Sonoff iFan**][ifan] module - motor control, use **switch** as a separate device for light control
 - **s31** - This is for the [**Sonoff S31**][s31] energy monitoring (use switch type for control)
 
-<u>Tasmota-flashed SENSOR Devices:</u>
+#### Tasmota-flashed SENSOR Devices
 
 If you are using 'types' in this section, you need to add this object to the configuration of the device:
-  ```sensor_id: "sensor name"```
+
+```text
+sensor_id: "sensor name"
+```
+
 The 'sensor name' can be found by examining an MQTT message in the Web console of the Tasmota device
 
 - **analog** - General purpose Analog input using onboard ADC.
@@ -130,23 +140,36 @@ The 'sensor name' can be found by examining an MQTT message in the Web console o
 - **Temp** - For DS18B20 sensors.
 - **TempHumidPress** - Supports the BME280 sensors.
 
-<u>Non-Tasmota Devices:</u>
+#### Non-Tasmota Devices
+
 - **RGBW** - Control for a micro-controlled [**RGBW Strip**][RGBW strip]
 - **sensor** - For nodemcu multi-sensor (see link in thread)
 - **shellyflood** - [**Shelly Flood sensor**][Flood]; supports monitoring of temperature, water leak detection (`flood`), battery level, and errors. Uses Shelly's MQTT mode, not Tasmota.
 - **raw** - simple str, int
 - **ratgdo** - adds garage device based on the ratgdo board; use topic_prefix/device name for both status & command topics. See [**ratgdo site**](https://paulwieland.github.io/ratgdo/)
+- **droplet** - [**Droplet flow/volume sensor**][Droplet] by Hydrific; monitors water flow rate and volume with cloud connectivity status. Automatically subscribes to both `/state` (JSON data) and `/health` (LWT) topics.
 
 ### `"status_topic":`
 
 - For switch this will be the cmnd topic (like `cmnd/sonoff1/POWER`),
 - For sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`).
 - For Shelly Floods, this will be an array, like:
+
 ```json
 [ "shellies/shellyflood-<unique-id>/sensor/temperature",
    "shellies/shellyflood-<unique-id>/sensor/flood" ]
 ```
+
 (they usually also have a `battery` and `error` topic that follow the same pattern).
+
+- For Droplet devices, use the base topic (like `droplet-ABCD`), and the NodeServer will automatically subscribe to both `/state` and `/health` subtopics:
+
+```yaml
+- id: "droplet_kitchen"
+  type: "droplet"
+  status_topic: "droplet-ABCD"
+  cmd_topic: "droplet-ABCD"  # Required but not used
+```
 
 ### `"cmd_topic":`
 
@@ -163,3 +186,4 @@ Just enter a generic topic (`cmnd/sensor/power`).
 [RGBW strip]: http://github.com/sejgit/shelfstrip
 [dimmer]: https://www.amazon.com/Dimmer-Switch-Bresuve-Wireless-Compatible/dp/B07WRJWD28?th=1
 [Flood]: https://shelly-api-docs.shelly.cloud/gen1/#shelly-flood-overview
+[Droplet]: https://hydrificwater.com/

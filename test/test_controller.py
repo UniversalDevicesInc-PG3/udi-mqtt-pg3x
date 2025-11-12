@@ -13,7 +13,7 @@ Tests cover:
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import Mock, patch
 from nodes.Controller import (
     Controller,
     DEFAULT_CONFIG,
@@ -468,7 +468,7 @@ class TestControllerHandleLevelChange:
 
     def test_handle_level_change_debug(self, controller):
         """Test handling log level change to DEBUG."""
-        with patch("nodes.Controller.LOGGER") as mock_logger:
+        with patch("nodes.Controller.LOGGER") as _mock_logger:
             with patch("nodes.Controller.LOG_HANDLER") as mock_handler:
                 controller.handleLevelChange({"level": 5})  # Level is a dict
 
@@ -507,7 +507,7 @@ class TestControllerPoll:
         """Test that poll increments heartbeat."""
         controller.ready_event.set()  # Set ready event
         controller.reportCmd = Mock()  # Mock reportCmd
-        
+
         initial_hb = controller.hb
 
         controller.poll({"shortPoll": True})
@@ -519,7 +519,7 @@ class TestControllerPoll:
         """Test that poll calls reportCmd."""
         controller.ready_event.set()  # Set ready event
         controller.reportCmd = Mock()
-        
+
         controller.poll({"shortPoll": True})
 
         controller.reportCmd.assert_called()
@@ -560,9 +560,11 @@ class TestControllerQuery:
         mock_node1.reportDrivers = Mock()
         mock_node2 = Mock()
         mock_node2.reportDrivers = Mock()
-        
-        controller.poly.getNodes = Mock(return_value={"node1": mock_node1, "node2": mock_node2})
-        
+
+        controller.poly.getNodes = Mock(
+            return_value={"node1": mock_node1, "node2": mock_node2}
+        )
+
         controller.query()
 
         mock_node1.reportDrivers.assert_called_once()
@@ -599,7 +601,7 @@ class TestControllerIntegration:
         poly.db_getNodeDrivers = Mock(return_value=[])
         poly.addNode = Mock(return_value=True)
         poly.getNode = Mock(return_value=None)
-        
+
         for attr in [
             "START",
             "POLL",
@@ -636,7 +638,7 @@ class TestControllerIntegration:
         controller.ready_event.set()
         controller.reportCmd = Mock()
 
-        initial_hb = controller.hb
+        _initial_hb = controller.hb
 
         # Poll multiple times
         controller.poll({"shortPoll": True})
@@ -741,7 +743,9 @@ class TestControllerMqttPub:
         """Test that mqtt_pub publishes message."""
         controller.mqtt_pub("test/topic", "test_message")
 
-        controller.mqttc.publish.assert_called_once_with("test/topic", "test_message", retain=False)
+        controller.mqttc.publish.assert_called_once_with(
+            "test/topic", "test_message", retain=False
+        )
 
 
 class TestControllerStop:
@@ -933,7 +937,7 @@ class TestControllerMqttSubscribe:
         """Test successful MQTT subscription."""
         # Mock subscribe to return success (0, mid)
         controller.mqttc.subscribe = Mock(return_value=(0, 123))
-        
+
         mock_node = Mock()
         mock_node.query = Mock()
         controller.poly.getNode.return_value = mock_node
@@ -949,7 +953,7 @@ class TestControllerMqttSubscribe:
         """Test MQTT subscription with failure."""
         # Mock subscribe to return failure (1, mid)
         controller.mqttc.subscribe = Mock(return_value=(1, 456))
-        
+
         mock_node = Mock()
         mock_node.query = Mock()
         controller.poly.getNode.return_value = mock_node
@@ -1150,13 +1154,14 @@ class TestControllerCheckParams:
 
     def test_check_params_with_devlist(self, controller):
         """Test checkParams with devlist."""
+
         def mock_get(x):
             if x == "devfile":
                 return None
             elif x == "devlist":
-                return '[]'
+                return "[]"
             return None
-        
+
         controller.Parameters = Mock()
         controller.Parameters.get = Mock(side_effect=mock_get)
 
@@ -1178,7 +1183,9 @@ class TestControllerCheckParams:
 
     def test_check_params_devfile_load_fails(self, controller):
         """Test checkParams when devfile load fails."""
-        controller.Parameters.get = Mock(side_effect=lambda x: "file.yaml" if x == "devfile" else None)
+        controller.Parameters.get = Mock(
+            side_effect=lambda x: "file.yaml" if x == "devfile" else None
+        )
         controller._load_devfile_config.return_value = False
 
         result = controller.checkParams()
@@ -1187,7 +1194,9 @@ class TestControllerCheckParams:
 
     def test_check_params_mqtt_load_fails(self, controller):
         """Test checkParams when MQTT parameter load fails."""
-        controller.Parameters.get = Mock(side_effect=lambda x: "file.yaml" if x == "devfile" else None)
+        controller.Parameters.get = Mock(
+            side_effect=lambda x: "file.yaml" if x == "devfile" else None
+        )
         controller._load_mqtt_parameters.return_value = False
 
         result = controller.checkParams()

@@ -225,11 +225,7 @@ class TestMQAnalogUpdateInfo:
 
     def test_update_info_tasmota_with_multi_sensor(self, multi_sensor):
         """Test Tasmota wrapper with multi-sensor mode."""
-        payload = json.dumps({
-            "StatusSNS": {
-                "ANALOG": {"A0": 333, "A1": 444}
-            }
-        })
+        payload = json.dumps({"StatusSNS": {"ANALOG": {"A0": 333, "A1": 444}}})
 
         multi_sensor.updateInfo(payload, "test/state")
 
@@ -380,12 +376,9 @@ class TestMQAnalogIntegration:
         sensor = full_setup
 
         # Tasmota sends StatusSNS wrapper
-        payload = json.dumps({
-            "StatusSNS": {
-                "Time": "2025-01-01T12:00:00",
-                "ANALOG": {"A0": 1024}
-            }
-        })
+        payload = json.dumps(
+            {"StatusSNS": {"Time": "2025-01-01T12:00:00", "ANALOG": {"A0": 1024}}}
+        )
 
         sensor.updateInfo(payload, "home/adc/tele/SENSOR")
 
@@ -447,13 +440,7 @@ class TestMQAnalogIntegration:
         sensor.setDriver = Mock()
 
         # Payload with multiple sensors
-        payload = json.dumps({
-            "ANALOG": {
-                "A0": 100,
-                "A1": 200,
-                "A2": 300
-            }
-        })
+        payload = json.dumps({"ANALOG": {"A0": 100, "A1": 200, "A2": 300}})
 
         sensor.updateInfo(payload, "test/state")
 

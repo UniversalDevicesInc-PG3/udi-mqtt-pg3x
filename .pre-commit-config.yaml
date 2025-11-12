@@ -38,6 +38,13 @@ repos:
       - id: shellcheck
         exclude: '^\.envrc$'
 
+  # Markdown linting
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.13.0
+    hooks:
+      - id: markdownlint-cli2
+        name: Lint Markdown files
+
   # Local hook to run your test suite
   - repo: local
     hooks:

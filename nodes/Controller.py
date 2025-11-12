@@ -40,6 +40,7 @@ from .MQs31 import MQs31
 from .MQraw import MQraw
 from .MQRGBWstrip import MQRGBWstrip
 from .MQratgdo import MQratgdo
+from .MQDroplet import MQDroplet
 
 DEFAULT_CONFIG = {
     "mqtt_server": "localhost",
@@ -136,6 +137,13 @@ DEVICE_CONFIG = {
             dev["status_topic"] + "/status/motion",
             dev["status_topic"] + "/status/lock",
             dev["status_topic"] + "/status/obstruction",
+        ],
+    },
+    "droplet": {
+        "node_class": MQDroplet,
+        "status_topics": lambda dev: [
+            dev["status_topic"] + "/state",
+            dev["status_topic"] + "/health",
         ],
     },
 }

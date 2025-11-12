@@ -198,16 +198,18 @@ class TestMQSensorUpdateInfo:
 
     def test_update_info_complete_payload(self, sensor):
         """Test handling complete sensor payload."""
-        payload = json.dumps({
-            "motion": "active",
-            "temperature": 72.0,
-            "humidity": 55,
-            "heatIndex": 73.5,
-            "ldr": 750,
-            "state": "ON",
-            "brightness": 200,
-            "color": {"r": 255, "g": 128, "b": 64}
-        })
+        payload = json.dumps(
+            {
+                "motion": "active",
+                "temperature": 72.0,
+                "humidity": 55,
+                "heatIndex": 73.5,
+                "ldr": 750,
+                "state": "ON",
+                "brightness": 200,
+                "color": {"r": 255, "g": 128, "b": 64},
+            }
+        )
 
         sensor.updateInfo(payload, "test/sensor/state")
 
@@ -292,7 +294,7 @@ class TestMQSensorCommands:
                 "G.uom100": "128",
                 "B.uom100": "64",
                 "I.uom100": "200",
-            }
+            },
         }
 
         sensor_with_controller.led_set(command)
@@ -318,7 +320,7 @@ class TestMQSensorCommands:
                 "B.uom100": "0",
                 "I.uom100": "255",
                 "D.uom58": "500",
-            }
+            },
         }
 
         sensor_with_controller.led_set(command)
@@ -338,7 +340,7 @@ class TestMQSensorCommands:
                 "B.uom100": "0",
                 "I.uom100": "255",
                 "F.uom58": "3",
-            }
+            },
         }
 
         sensor_with_controller.led_set(command)
@@ -359,7 +361,7 @@ class TestMQSensorCommands:
                 "I.uom100": "100",
                 "D.uom58": "0",
                 "F.uom58": "0",
-            }
+            },
         }
 
         sensor_with_controller.led_set(command)
@@ -423,8 +425,18 @@ class TestMQSensorDriversAndCommands:
         assert len(MQSensor.drivers) == 10
 
         driver_names = [d["driver"] for d in MQSensor.drivers]
-        expected = ["ST", "CLITEMP", "GPV", "CLIHUM", "LUMIN",
-                    "GV0", "GV1", "GV2", "GV3", "GV4"]
+        expected = [
+            "ST",
+            "CLITEMP",
+            "GPV",
+            "CLIHUM",
+            "LUMIN",
+            "GV0",
+            "GV1",
+            "GV2",
+            "GV3",
+            "GV4",
+        ]
         assert driver_names == expected
 
     def test_commands_configuration(self):
@@ -486,12 +498,9 @@ class TestMQSensorIntegration:
         """Test environmental sensor updates."""
         sensor = full_sensor_setup
 
-        payload = json.dumps({
-            "temperature": 72.5,
-            "humidity": 55,
-            "heatIndex": 74.0,
-            "ldr": 800
-        })
+        payload = json.dumps(
+            {"temperature": 72.5, "humidity": 55, "heatIndex": 74.0, "ldr": 800}
+        )
 
         sensor.updateInfo(payload, "home/multisensor/state")
 
@@ -520,7 +529,7 @@ class TestMQSensorIntegration:
                 "R.uom100": "255",
                 "G.uom100": "0",
                 "B.uom100": "0",
-                "I.uom100": "255"
+                "I.uom100": "255",
             }
         }
         sensor.led_set(command)
@@ -530,16 +539,18 @@ class TestMQSensorIntegration:
         """Test complete sensor data update."""
         sensor = full_sensor_setup
 
-        payload = json.dumps({
-            "motion": "active",
-            "temperature": 70.0,
-            "humidity": 60,
-            "heatIndex": 72.0,
-            "ldr": 650,
-            "state": "ON",
-            "brightness": 150,
-            "color": {"r": 200, "g": 100, "b": 50}
-        })
+        payload = json.dumps(
+            {
+                "motion": "active",
+                "temperature": 70.0,
+                "humidity": 60,
+                "heatIndex": 72.0,
+                "ldr": 650,
+                "state": "ON",
+                "brightness": 150,
+                "color": {"r": 200, "g": 100, "b": 50},
+            }
+        )
 
         sensor.updateInfo(payload, "home/multisensor/state")
 
