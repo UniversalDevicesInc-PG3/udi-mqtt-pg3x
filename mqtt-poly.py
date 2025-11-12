@@ -27,6 +27,7 @@ VERSION = "0.50.0"
 DONE refactor Controller/Nodes for Pythonic & commenting
 DONE add user defined default status_prefix & cmd_prefix
 DONE add numofnodes
+DONE add MQDroplet device
 
 0.40.3
 DONE: fixed typos in POLYGLOT_CONFIG.md
