@@ -119,6 +119,10 @@
         <range uom="25" subset="0,1,2,3" nls="DSIGNAL" />
     </editor>
 
+    <editor id="DHEALTH">
+        <range uom="25" subset="0,1" nls="DHEALTH" />
+    </editor>
+
     <editor id="VOLUME">
         <range uom="35" min="0" max="1000" prec="3" />
     </editor>

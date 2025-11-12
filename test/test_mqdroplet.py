@@ -531,7 +531,7 @@ class TestMQDropletDriversAndCommands:
         assert driver_dict["GV0"]["value"] == 1  # Default: No Signal
         assert driver_dict["GV0"]["name"] == "Signal Quality"
 
-        assert driver_dict["GV1"]["uom"] == 2  # boolean
+        assert driver_dict["GV1"]["uom"] == 25  # index
         assert driver_dict["GV1"]["value"] == 0  # Default: Offline
         assert driver_dict["GV1"]["name"] == "Health Status"
 

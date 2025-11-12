@@ -14,6 +14,7 @@ In your devices configuration, add a Droplet device with the base topic:
   - id: droplet_kitchen
     type: droplet
     status_topic: droplet-ABCD
+    cmd_topic: droplet-ABCD  # Required but not used
 
 Where ABCD is your Droplet's 4-character identifier.
 
@@ -30,7 +31,7 @@ Example state message:
 }
 
 Note: Droplet devices publish state periodically and do not respond to
-command topics.
+command topics. The cmd_topic is required for validation but not used.
 """
 
 # std libraries
@@ -164,7 +165,6 @@ class MQDroplet(Node):
 
     """
     UOMs:
-    2 = boolean
     25 = index
     35 = liter (L)
     130 = Liters per hour (L/h)
@@ -174,14 +174,14 @@ class MQDroplet(Node):
     Driver controls:
     ST: Server Connectivity Status (index: 0=Connected, 1=Connecting, 2=Disconnected)
     GV0: Signal Quality (index: 0=Initializing, 1=No Signal, 2=Weak Signal, 3=Strong Signal)
-    GV1: Health Status (boolean: 0=Offline, 1=Online) - MQTT connection via LWT
+    GV1: Health Status (index: 0=Offline, 1=Online) - MQTT connection via LWT
     WVOL: Water Volume (liters) - point-to-point volume since last update
     WATERF: Water Flow Rate (L/h)
     """
     drivers = [
         {"driver": "ST", "value": 2, "uom": 25, "name": "Server Status"},
         {"driver": "GV0", "value": 1, "uom": 25, "name": "Signal Quality"},
-        {"driver": "GV1", "value": 0, "uom": 2, "name": "Health Status"},
+        {"driver": "GV1", "value": 0, "uom": 25, "name": "Health Status"},
         {"driver": "WVOL", "value": 0, "uom": 35, "name": "Volume"},
         {"driver": "WATERF", "value": 0, "uom": 130, "name": "Flow Rate"},
     ]

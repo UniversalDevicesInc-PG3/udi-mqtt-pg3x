@@ -257,3 +257,6 @@ DSIGNAL-0 = Initializing
 DSIGNAL-1 = No Signal
 DSIGNAL-2 = Weak Signal
 DSIGNAL-3 = Strong Signal
+
+DHEALTH-0 = Offline
+DHEALTH-1 = Online
