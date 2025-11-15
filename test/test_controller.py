@@ -14,6 +14,7 @@ Tests cover:
 
 import pytest
 from unittest.mock import Mock, patch
+import yaml
 from nodes.Controller import (
     Controller,
     DEFAULT_CONFIG,
@@ -1263,3 +1264,242 @@ class TestControllerHeartbeat:
         controller.heartbeat()
         controller.reportCmd.assert_called_with("DOF", 2)
         assert controller.hb is False
+
+
+class TestControllerOnMessage:
+    """Tests for _on_message method and message routing."""
+
+    @pytest.fixture
+    def controller(self):
+        """Create a Controller instance with a mocked node."""
+        poly = Mock()
+        poly.subscribe = Mock()
+        poly.ready = Mock()
+        poly.db_getNodeDrivers = Mock(return_value=[])
+        poly.getValidAddress = lambda x: x
+        for attr in [
+            "START",
+            "POLL",
+            "LOGLEVEL",
+            "CUSTOMPARAMS",
+            "CUSTOMDATA",
+            "STOP",
+            "DISCOVER",
+            "CUSTOMTYPEDPARAMS",
+            "CUSTOMTYPEDDATA",
+            "ADDNODEDONE",
+        ]:
+            setattr(poly, attr, attr)
+
+        c = Controller(poly, "controller", "controller", "MQTT")
+
+        # Mock a node and add it to poly
+        mock_node = Mock()
+        mock_node.updateInfo = Mock()
+        c.poly.getNode = Mock(return_value=mock_node)
+
+        return c
+
+    def test_on_message_plain_text(self, controller):
+        """Test processing a plain text message."""
+        topic = "stat/switch1/POWER"
+        payload = "ON"
+        message = Mock()
+        message.topic = topic
+        message.payload = payload.encode("utf-8")
+
+        # Setup topic to device mapping
+        controller.status_topics_to_devices[topic] = "switch1_address"
+
+        # Simulate message arrival
+        controller._on_message(None, None, message)
+
+        # Verify that the correct node's updateInfo was called
+        controller.poly.getNode.assert_called_once_with("switch1_address")
+        controller.poly.getNode.return_value.updateInfo.assert_called_once_with(
+            payload, topic
+        )
+
+    def test_on_message_json(self, controller):
+        """Test processing a JSON message."""
+        topic = "tele/dimmer1/STATE"
+        payload = '{"POWER":"ON","Dimmer":50}'
+        message = Mock()
+        message.topic = topic
+        message.payload = payload.encode("utf-8")
+
+        # Setup topic to device mapping
+        controller.status_topics_to_devices[topic] = "dimmer1_address"
+
+        # Simulate message arrival
+        controller._on_message(None, None, message)
+
+        # Verify that the correct node's updateInfo was called
+        controller.poly.getNode.assert_called_once_with("dimmer1_address")
+        controller.poly.getNode.return_value.updateInfo.assert_called_once_with(
+            payload, topic
+        )
+
+    def test_on_message_json_with_status_sns(self, controller):
+        """Test processing a JSON message with a StatusSNS key."""
+        topic = "tele/sensor1/SENSOR"
+        payload = (
+            '{"Time":"2025-11-15T10:00:00","StatusSNS":{"BME280":{"Temperature":25.0}}}'
+        )
+        message = Mock()
+        message.topic = topic
+        message.payload = payload.encode("utf-8")
+
+        # Setup topic to device mapping
+        controller.status_topics_to_devices[topic] = "sensor1_address"
+        controller.devlist = [
+            {
+                "id": "sensor1",
+                "type": "TempHumidPress",
+                "status_topic": topic,
+                "sensor_id": "BME280",
+            }
+        ]
+
+        # Simulate message arrival
+        controller._on_message(None, None, message)
+
+        # Verify that the correct node's updateInfo was called
+        # Note: The address is derived from the devlist id, not the mapped address in this case
+        controller.poly.getNode.assert_called_once_with("sensor1")
+        controller.poly.getNode.return_value.updateInfo.assert_called_once_with(
+            payload, topic, "BME280"
+        )
+
+    def test_on_message_unhandled_topic(self, controller):
+        """Test processing a message for a topic with no device."""
+        topic = "stat/unknown_device/POWER"
+        payload = "ON"
+        message = Mock()
+        message.topic = topic
+        message.payload = payload.encode("utf-8")
+
+        # No topic mapping for this device
+
+        with patch("nodes.Controller.LOGGER") as mock_logger:
+            # Simulate message arrival
+            controller._on_message(None, None, message)
+
+            # Verify that getNode was not called and a warning was logged
+            controller.poly.getNode.assert_not_called()
+            mock_logger.warning.assert_called_with(
+                f"No device found for topic: {topic}"
+            )
+
+    def test_on_message_exception_handling(self, controller):
+        """Test that exceptions during message processing are caught."""
+        topic = "stat/switch1/POWER"
+        payload = "ON"
+        message = Mock()
+        message.topic = topic
+        message.payload = payload.encode("utf-8")
+
+        # Setup topic to device mapping
+        controller.status_topics_to_devices[topic] = "switch1_address"
+
+        # Simulate an error during processing
+        error = Exception("Test Error")
+        controller.poly.getNode.side_effect = error
+
+        with patch("nodes.Controller.LOGGER") as mock_logger:
+            # Simulate message arrival
+            controller._on_message(None, None, message)
+
+            # Verify that an error was logged
+            mock_logger.error.assert_called_with(
+                f"Failed to route message to device: {error}"
+            )
+
+
+class TestControllerConfigErrors:
+    """Tests for configuration error handling."""
+
+    @pytest.fixture
+    def controller(self):
+        """Create a Controller instance for testing config errors."""
+        poly = Mock()
+        poly.subscribe = Mock()
+        poly.ready = Mock()
+        poly.db_getNodeDrivers = Mock(return_value=[])
+        for attr in [
+            "START",
+            "POLL",
+            "LOGLEVEL",
+            "CUSTOMPARAMS",
+            "CUSTOMDATA",
+            "STOP",
+            "DISCOVER",
+            "CUSTOMTYPEDPARAMS",
+            "CUSTOMTYPEDDATA",
+            "ADDNODEDONE",
+        ]:
+            setattr(poly, attr, attr)
+
+        c = Controller(poly, "controller", "controller", "MQTT")
+        c.Parameters = {"devfile": "nonexistent.yaml"}
+        return c
+
+    def test_load_devfile_not_found(self, controller):
+        """Test _load_devfile_config with a nonexistent file."""
+        with patch("builtins.open", side_effect=FileNotFoundError("File not found")):
+            with patch("nodes.Controller.LOGGER") as mock_logger:
+                result = controller._load_devfile_config()
+                assert result is False
+                mock_logger.error.assert_called_with(
+                    "Failed to open nonexistent.yaml: File not found"
+                )
+
+    def test_load_devfile_invalid_yaml(self, controller):
+        """Test _load_devfile_config with invalid YAML content."""
+        with patch("builtins.open"):
+            with patch("yaml.safe_load", side_effect=yaml.YAMLError("YAML error")):
+                with patch("nodes.Controller.LOGGER") as mock_logger:
+                    result = controller._load_devfile_config()
+                    assert result is False
+                    mock_logger.error.assert_called_with(
+                        "Failed to parse nonexistent.yaml: YAML error"
+                    )
+
+    def test_load_devfile_missing_devices_section(self, controller):
+        """Test _load_devfile_config with YAML missing 'devices' section."""
+        with patch("builtins.open"):
+            with patch("yaml.safe_load", return_value={"general": []}):
+                with patch("nodes.Controller.LOGGER") as mock_logger:
+                    result = controller._load_devfile_config()
+                    assert result is False
+                    mock_logger.error.assert_called_with(
+                        "Manual discovery file nonexistent.yaml is missing devices section"
+                    )
+
+    def test_load_devlist_invalid_json(self, controller):
+        """Test _load_devlist_config with invalid JSON."""
+        controller.Parameters = {"devlist": "invalid-json"}
+        with patch("nodes.Controller.LOGGER") as mock_logger:
+            result = controller._load_devlist_config()
+            assert result is False
+            mock_logger.error.assert_called()
+
+    def test_load_devlist_not_a_dictionary(self, controller):
+        """Test _load_devlist_config with JSON that is not a dictionary."""
+        controller.Parameters = {"devlist": "[1, 2, 3]"}  # JSON list
+        with patch("nodes.Controller.LOGGER") as mock_logger:
+            result = controller._load_devlist_config()
+            assert result is False
+            mock_logger.error.assert_called_with("Devlist data must be a dictionary")
+
+    def test_load_mqtt_parameters_invalid_port(self, controller):
+        """Test _load_mqtt_parameters with an invalid port."""
+        controller.Parameters = {"mqtt_port": "not-a-number"}
+        controller.general = {}  # Ensure it doesn't fallback to general config
+
+        # Patch DEFAULT_CONFIG to ensure _get_int returns None
+        with patch.dict(DEFAULT_CONFIG, {"mqtt_port": None}):
+            with patch("nodes.Controller.LOGGER") as mock_logger:
+                result = controller._load_mqtt_parameters()
+                assert result is False
+                mock_logger.error.assert_called()

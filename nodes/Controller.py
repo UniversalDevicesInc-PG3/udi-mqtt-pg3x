@@ -707,6 +707,9 @@ class Controller(Node):
             self.cmd_prefix = self._get_str(
                 self.Parameters.get("cmd_prefix"), self.general.get("cmd_prefix")
             )
+
+            if self.mqtt_server is None or self.mqtt_port is None:
+                raise ValueError("MQTT server and port must be configured.")
         except (ValueError, TypeError) as ex:
             LOGGER.error(f"Failed to parse MQTT parameters: {ex}")
             return False
@@ -1075,12 +1078,19 @@ class Controller(Node):
         Returns:
             None
         """
-        for status_topic in self.status_topics_to_devices:
-            if self.status_topics_to_devices[status_topic] == self.poly.getNode(node):
+        topics_to_remove = []
+        # Collect topics associated with the node to be removed
+        for status_topic, device_address in self.status_topics_to_devices.items():
+            if device_address == node:
+                topics_to_remove.append(status_topic)
+
+        # Remove the collected topics
+        for status_topic in topics_to_remove:
+            if status_topic in self.status_topics:
                 self.status_topics.remove(status_topic)
+            if status_topic in self.status_topics_to_devices:
                 self.status_topics_to_devices.pop(status_topic)
-                LOGGER.info(f"remove topic = {status_topic}")
-            # should be keyed to `id` instead of `status_topic`
+                LOGGER.info(f"Removed subscription for topic: {status_topic}")
 
     def _on_connect(self, _mqttc, _userdata, _flags, rc):
         """Handle MQTT connection events.
@@ -1270,7 +1280,16 @@ class Controller(Node):
                 device_address = self._dev_by_topic(topic)
 
             if device_address:
-                self.poly.getNode(device_address).updateInfo(payload, topic)
+                node = self.poly.getNode(device_address)
+                if node:
+                    if sensor:
+                        node.updateInfo(payload, topic, sensor)
+                    else:
+                        node.updateInfo(payload, topic)
+                else:
+                    LOGGER.warning(
+                        f"Node object not found for address: {device_address}"
+                    )
             else:
                 LOGGER.warning(f"No device found for topic: {topic}")
         except Exception as ex:
