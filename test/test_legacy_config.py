@@ -11,7 +11,9 @@ import pytest
 import yaml
 from unittest.mock import Mock
 
-from nodes.Controller import Controller, DEFAULT_CONFIG, DEVICE_CONFIG
+from nodes.constants import DEFAULT_CONFIG
+from nodes.device_registry import DEVICE_CONFIG
+from nodes.Controller import Controller
 
 
 @pytest.fixture

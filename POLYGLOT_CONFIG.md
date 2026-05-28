@@ -151,7 +151,7 @@ The 'sensor name' can be found by examining an MQTT message in the Web console o
 
 ### `"status_topic":`
 
-- For switch this will be the cmnd topic (like `cmnd/sonoff1/POWER`),
+- For switch this will be the stat topic (like `stat/sonoff1/POWER`),
 - For sensors this will be the telemetry topic (like `tele/sonoff/SENSOR`).
 - For Shelly Floods, this will be an array, like:
 
