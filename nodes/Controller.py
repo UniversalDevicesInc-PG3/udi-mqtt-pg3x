@@ -13,146 +13,18 @@ Copyright: (C) 2025 Stephen Jenkins
 
 # std libraries
 import json
-import yaml
-import time
 import logging
 from threading import Event, Condition
 from typing import Dict, List, Optional, Any
 
 # external libraries
 from udi_interface import Node, LOGGER, Custom, LOG_HANDLER
-from paho.mqtt.client import Client
-from paho.mqtt.enums import CallbackAPIVersion
 
-# Nodes
-from .MQSwitch import MQSwitch
-from .MQDimmer import MQDimmer
-from .MQFan import MQFan
-from .MQSensor import MQSensor
-from .MQFlag import MQFlag
-from .MQdht import MQdht
-from .MQds import MQds
-from .MQbme import MQbme
-from .MQhcsr import MQhcsr
-from .MQShellyFlood import MQShellyFlood
-from .MQAnalog import MQAnalog
-from .MQs31 import MQs31
-from .MQraw import MQraw
-from .MQRGBWstrip import MQRGBWstrip
-from .MQratgdo import MQratgdo
-from .MQDroplet import MQDroplet
-
-DEFAULT_CONFIG = {
-    "mqtt_server": "localhost",
-    "mqtt_port": 1884,
-    "mqtt_user": "admin",
-    "mqtt_password": "admin",
-    "status_prefix": None,
-    "cmd_prefix": None,
-}
-
-MQTT_CONNECT_WAIT_SEC = 60
-
-STATUS_TOPIC_PREFIX = "stat/"
-TELE_TOPIC_PREFIX = "tele/"
-RESULT_TOPIC_SUFFIX = "/RESULT"
-STATUS10_TOPIC_SUFFIX = "/STATUS10"
-
-# Sensor processor mapping for MQTT message processing
-SENSOR_PROCESSORS = {
-    "ANALOG": "_OA",
-    "DS18B20": "_ODS",
-    "AM2301": "_OAM",
-    "BME280": "_OBM",
-}
-
-# Comprehensive device configuration mapping
-DEVICE_CONFIG = {
-    "switch": {
-        "node_class": MQSwitch,
-    },
-    "dimmer": {
-        "node_class": MQDimmer,
-        "extra_status_topics": lambda dev: [
-            dev["status_topic"].rsplit("/", 1)[0] + RESULT_TOPIC_SUFFIX
-        ],
-    },
-    "ifan": {
-        "node_class": MQFan,
-    },
-    "sensor": {
-        "node_class": MQSensor,
-    },
-    "flag": {
-        "node_class": MQFlag,
-    },
-    "TempHumid": {
-        "node_class": MQdht,
-        "extra_status_topics": lambda dev: [
-            dev["status_topic"].rsplit("/", 1)[0]
-            + STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)
-        ],
-    },
-    "Temp": {
-        "node_class": MQds,
-        "extra_status_topics": lambda dev: [
-            dev["status_topic"].rsplit("/", 1)[0]
-            + STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)
-        ],
-    },
-    "TempHumidPress": {
-        "node_class": MQbme,
-        "extra_status_topics": lambda dev: [
-            dev["status_topic"].rsplit("/", 1)[0]
-            + STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)
-        ],
-    },
-    "distance": {
-        "node_class": MQhcsr,
-    },
-    "shellyflood": {
-        "node_class": MQShellyFlood,
-        "status_topics": lambda dev: (
-            dev["status_topic"]
-            if isinstance(dev["status_topic"], list)
-            else [dev["status_topic"]]
-        ),
-    },
-    "analog": {
-        "node_class": MQAnalog,
-        "extra_status_topics": lambda dev: [
-            dev["status_topic"].rsplit("/", 1)[0]
-            + STATUS10_TOPIC_SUFFIX.replace(TELE_TOPIC_PREFIX, STATUS_TOPIC_PREFIX)
-        ],
-    },
-    "s31": {
-        "node_class": MQs31,
-    },
-    "raw": {
-        "node_class": MQraw,
-    },
-    "RGBW": {
-        "node_class": MQRGBWstrip,
-    },
-    "ratgdo": {
-        "node_class": MQratgdo,
-        "status_topics": lambda dev: [
-            dev["status_topic"] + "/status/availability",
-            dev["status_topic"] + "/status/light",
-            dev["status_topic"] + "/status/door",
-            dev["status_topic"] + "/status/motion",
-            dev["status_topic"] + "/status/lock",
-            dev["status_topic"] + "/status/obstruction",
-        ],
-    },
-    "droplet": {
-        "node_class": MQDroplet,
-        "status_topics": lambda dev: [
-            dev["status_topic"] + "/state",
-            dev["status_topic"] + "/health",
-        ],
-    },
-}
+# local modules
+from . import config_loader
+from .constants import SENSOR_PROCESSORS
+from .device_registry import DEVICE_CONFIG
+from .mqtt_bridge import MqttBridge
 
 
 class Controller(Node):
@@ -239,6 +111,7 @@ class Controller(Node):
         # Maps to device IDs
         self.status_topics_to_devices: Dict[str, str] = {}
         self.valid_configuration = False
+        self.mqtt_bridge: Optional[MqttBridge] = None
 
         # Create data storage classes
         self.Notices = Custom(poly, "notices")
@@ -350,53 +223,9 @@ class Controller(Node):
         LOGGER.info(f"exit {self.name}")
 
     def _mqtt_start(self):
-        """Initialize and connect to the MQTT broker.
-
-        Creates an MQTT client, configures connection parameters, and establishes
-        a connection to the user's MQTT server. Configuration is loaded from
-        Parameters, devfile, and defaults in that order of precedence.
-
-        Returns:
-            bool: True if connection successful, False otherwise.
-
-        Note:
-            This method will retry connection attempts and log appropriate
-            error messages if the connection fails.
-        """
-        self.mqttc = Client(CallbackAPIVersion.VERSION1)
-        self.mqttc.on_connect = self._on_connect
-        self.mqttc.on_disconnect = self._on_disconnect  # type: ignore
-        self.mqttc.on_message = self._on_message
-        self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
-
-        try:
-            assert self.mqtt_server is not None, "mqtt_server must be set"
-            assert self.mqtt_port is not None, "mqtt_port must be set"
-            self.mqttc.connect(self.mqtt_server, self.mqtt_port, keepalive=10)
-            self.mqttc.loop_start()
-        except Exception as ex:
-            LOGGER.error(f"Error connecting to Poly MQTT broker: {ex}")
-            self.Notices["mqtt"] = "Error on user MQTT connection"
-            return False  # Early exit on failure
-
-        deadline = time.time() + MQTT_CONNECT_WAIT_SEC
-        while not self.mqttc.is_connected():
-            if time.time() >= deadline:
-                LOGGER.error(
-                    "Timed out waiting for MQTT connection after %s seconds",
-                    MQTT_CONNECT_WAIT_SEC,
-                )
-                self.Notices["mqtt"] = "Error on user MQTT connection"
-                self.mqttc.loop_stop()
-                return False
-            LOGGER.error("Start: Waiting on user MQTT connection")
-            self.Notices["mqtt"] = "Waiting on user MQTT connection"
-            time.sleep(3)
-
-        self.Notices.clear()
-        self.mqtt_subscribe()
-        LOGGER.info("Start Done...")
-        return True
+        """Initialize and connect to the MQTT broker."""
+        self.mqtt_bridge = MqttBridge(self)
+        return self.mqtt_bridge.start()
 
     def node_queue(self, data):
         """Handle node creation completion notification.
@@ -545,20 +374,7 @@ class Controller(Node):
             self.all_handlers_st_event.set()
 
     def checkParams(self):
-        """Load and validate configuration parameters.
-
-        Loads device configuration from either a YAML devfile or JSON devlist
-        parameter. The devlist configuration takes precedence over devfile
-        values and will update or overwrite existing configuration.
-
-        Returns:
-            bool: True if configuration loaded successfully, False otherwise.
-
-        Note:
-            At least one of devfile or devlist must be configured for
-            successful operation.
-        """
-
+        """Load and validate configuration parameters."""
         has_devfile = bool(self.Parameters.get("devfile"))
         has_devlist = bool(self.Parameters.get("devlist"))
 
@@ -568,216 +384,37 @@ class Controller(Node):
             )
             return False
 
-        # Load device configuration from YAML file
-        if has_devfile:
-            if not self._load_devfile_config():
-                return False
-
-        # devlist adds to or overwrites entries from devfile
-        if has_devlist:
-            if not self._load_devlist_config():
-                return False
-
-        # Load MQTT parameters with fallback to general config
-        if not self._load_mqtt_parameters():
+        if has_devfile and not self._load_devfile_config():
             return False
-        # Success
-        return True
+
+        if has_devlist and not self._load_devlist_config():
+            return False
+
+        return self._load_mqtt_parameters()
 
     def _load_devfile_config(self):
-        """Load device configuration from YAML file.
-
-        Loads device configuration from a YAML file specified in the devfile
-        parameter. The YAML file should contain 'general' and 'devices' sections.
-        The general section is converted from an array of dictionaries to a
-        flat dictionary for easier access.
-
-        Returns:
-            bool: True if configuration loaded successfully, False otherwise.
-
-        Raises:
-            OSError: If the file cannot be opened.
-            yaml.YAMLError: If the YAML file cannot be parsed.
-        """
-        devfile_path = self.Parameters["devfile"]
-        if not devfile_path or not isinstance(devfile_path, str):
-            LOGGER.error("Invalid devfile path provided")
-            return False
-
-        try:
-            with open(devfile_path, "r", encoding="utf-8") as file:
-                dev_yaml = yaml.safe_load(file)
-        except (OSError, yaml.YAMLError) as ex:
-            error_type = "open" if isinstance(ex, OSError) else "parse"
-            LOGGER.error(f"Failed to {error_type} {devfile_path}: {ex}")
-            return False
-
-        if "devices" not in dev_yaml:
-            LOGGER.error(
-                f"Manual discovery file {devfile_path} is missing devices section"
-            )
-            return False
-        devices = dev_yaml.get("devices")
-        general = dev_yaml.get("general", [])
-        LOGGER.info(f"devices = {devices}")
-        LOGGER.info(f"general = {general}")
-
-        # initial device list is based on devfile items
-        self.devlist = devices
-
-        # these are the general configuration items based on devfile
-        self.general = {k: v for d in general for k, v in d.items()}
-        return True
+        """Load device configuration from YAML file."""
+        return config_loader.load_devfile_config(self)
 
     def _load_devlist_config(self):
-        """Load device configuration from JSON string.
-
-        Loads device configuration from a JSON string specified in the devlist
-        parameter. This configuration will update or add to the existing devlist
-        that was initially loaded from the devfile.
-
-        Returns:
-            bool: True if configuration loaded successfully, False otherwise.
-
-        Raises:
-            json.JSONDecodeError: If the JSON string cannot be parsed.
-            TypeError: If the data type is invalid.
-        """
-        devlist_data = self.Parameters["devlist"]
-        if not devlist_data:
-            LOGGER.error("No devlist data provided")
-            return False
-
-        try:
-            if isinstance(devlist_data, str):
-                parsed_data = json.loads(devlist_data)
-            else:
-                parsed_data = devlist_data
-
-            if isinstance(parsed_data, list):
-                for entry in parsed_data:
-                    if not isinstance(entry, dict):
-                        LOGGER.error("Devlist entries must be device dictionaries")
-                        return False
-                    self.upsert_by_id(self.devlist, entry)
-            elif isinstance(parsed_data, dict):
-                # Legacy single-device upsert format
-                self.upsert_by_id(self.devlist, parsed_data)
-            else:
-                LOGGER.error("Devlist data must be a list or dictionary")
-                return False
-        except (json.JSONDecodeError, TypeError) as ex:
-            LOGGER.error(f"Failed to parse devlist: {ex}")
-            return False
-        return True
+        """Load device configuration from JSON string."""
+        return config_loader.load_devlist_config(self)
 
     def upsert_by_id(self, config_list, new_entry):
-        """Update or insert device configuration by ID.
-
-        Updates an existing device configuration in the list if a device with
-        the same ID exists, or appends the new entry if no matching ID is found.
-
-        Args:
-            config_list (list): List of device configurations to update.
-            new_entry (dict): New device configuration to add or update.
-
-        Returns:
-            None
-        """
-        new_id = new_entry.get("id")
-        for i, entry in enumerate(config_list):
-            if entry.get("id") == new_id:
-                config_list[i] = new_entry  # Replace
-                return
-        config_list.append(new_entry)  # Append if not found
+        """Update or insert device configuration by ID."""
+        return config_loader.upsert_by_id(config_list, new_entry)
 
     def _load_mqtt_parameters(self) -> bool:
-        """Load MQTT connection parameters with fallback hierarchy.
-
-        Loads MQTT connection parameters using a fallback hierarchy:
-        1. Parameters from Polyglot interface
-        2. General configuration from devfile
-        3. Default configuration values
-
-        Returns:
-            bool: True if parameters loaded successfully, False otherwise.
-
-        Raises:
-            ValueError: If parameter values cannot be converted to expected types.
-            TypeError: If parameter types are invalid.
-        """
-        try:
-            self.mqtt_server = self._get_str(
-                self.Parameters.get("mqtt_server"),
-                self.general.get("mqtt_server"),
-                DEFAULT_CONFIG.get("mqtt_server"),
-            )
-            self.mqtt_port = self._get_int(
-                self.Parameters.get("mqtt_port"),
-                self.general.get("mqtt_port"),
-                DEFAULT_CONFIG.get("mqtt_port"),
-            )
-
-            self.mqtt_user = self._get_str(
-                self.Parameters.get("mqtt_user"),
-                self.general.get("mqtt_user"),
-                DEFAULT_CONFIG.get("mqtt_user"),
-            )
-            self.mqtt_password = self._get_str(
-                self.Parameters.get("mqtt_password"),
-                self.general.get("mqtt_password"),
-                DEFAULT_CONFIG.get("mqtt_password"),
-            )
-            self.status_prefix = self._get_str(
-                self.Parameters.get("status_prefix"), self.general.get("status_prefix")
-            )
-            self.cmd_prefix = self._get_str(
-                self.Parameters.get("cmd_prefix"), self.general.get("cmd_prefix")
-            )
-
-            if self.mqtt_server is None or self.mqtt_port is None:
-                raise ValueError("MQTT server and port must be configured.")
-        except (ValueError, TypeError) as ex:
-            LOGGER.error(f"Failed to parse MQTT parameters: {ex}")
-            return False
-        return True
+        """Load MQTT connection parameters with fallback hierarchy."""
+        return config_loader.load_mqtt_parameters(self)
 
     def _get_str(*args: Optional[Any]) -> Optional[str]:
-        """Get the first string value from a list of arguments.
-
-        Searches through the provided arguments and returns the first one
-        that is a string type, or None if no string is found.
-
-        Args:
-            *args: Variable number of arguments to search through.
-
-        Returns:
-            Optional[str]: First string found, or None if no string exists.
-        """
-        for val in args:
-            if isinstance(val, str):
-                return val
-        return None
+        """Get the first string value from a list of arguments."""
+        return config_loader.get_str(*args)
 
     def _get_int(*args: Optional[Any]) -> Optional[int]:
-        """Get the first integer value from a list of arguments.
-
-        Searches through the provided arguments and returns the first one
-        that is an integer type or can be converted to an integer, or None
-        if no valid integer is found.
-
-        Args:
-            *args: Variable number of arguments to search through.
-
-        Returns:
-            Optional[int]: First integer found, or None if no valid integer exists.
-        """
-        for val in args:
-            if isinstance(val, int):
-                return val
-            if isinstance(val, str) and val.isdigit():
-                return int(val)
-        return None
+        """Get the first integer value from a list of arguments."""
+        return config_loader.get_int(*args)
 
     def handleLevelChange(self, level):
         """Handle log level changes from Polyglot.
@@ -1114,6 +751,9 @@ class Controller(Node):
                 topics_to_remove.append(status_topic)
 
         # Remove the collected topics
+        if topics_to_remove and self.mqtt_bridge:
+            self.mqtt_bridge.unsubscribe(topics_to_remove)
+
         for status_topic in topics_to_remove:
             if status_topic in self.status_topics:
                 self.status_topics.remove(status_topic)
@@ -1192,7 +832,7 @@ class Controller(Node):
 
         topic = message.topic
         payload = message.payload.decode("utf-8")
-        LOGGER.info(f"Received message from {topic}: {payload}")
+        LOGGER.debug(f"Received message from {topic}: {payload}")
 
         try:
             # Try to parse as JSON first
@@ -1405,48 +1045,14 @@ class Controller(Node):
         return self.poly.getValidAddress(name)
 
     def mqtt_pub(self, topic, message):
-        """Publish a message to an MQTT topic.
-
-        Publishes a message to the specified MQTT topic using the connected
-        MQTT client. This is used to send commands to MQTT devices.
-
-        Args:
-            topic (str): MQTT topic to publish to.
-            message (str): Message content to publish.
-
-        Returns:
-            None
-        """
-
-        LOGGER.debug(f"mqtt_pub: topic: {topic}, message: {message}")
-        self.mqttc.publish(topic, message, retain=False)
+        """Publish a message to an MQTT topic."""
+        if self.mqtt_bridge:
+            self.mqtt_bridge.publish(topic, message)
 
     def mqtt_subscribe(self):
-        """Subscribe to MQTT status topics.
-
-        This method is called when the MQTT client connects or reconnects
-        to subscribe to all configured status topics. It logs the success
-        or failure of each subscription attempt.
-
-        Returns:
-            None
-        """
-        LOGGER.info("Poly MQTT subscribing...")
-        result = 255
-        results = []
-        for stopic in self.status_topics:
-            results.append((stopic, tuple(self.mqttc.subscribe(stopic))))
-
-        for topic, (result, mid) in results:
-            if result == 0:
-                LOGGER.info(f"Subscribed to {topic} MID: {mid}, res: {result}")
-            else:
-                LOGGER.error(f"Failed to subscribe {topic} MID: {mid}, res: {result}")
-
-        for node in self.poly.getNodes():
-            if node != self.address:
-                self.poly.getNode(node).query()
-        LOGGER.info("Subscriptions Done")
+        """Subscribe to MQTT status topics."""
+        if self.mqtt_bridge:
+            self.mqtt_bridge.subscribe()
 
     def delete(self, command=None):
         """Handle NodeServer deletion.
@@ -1481,7 +1087,9 @@ class Controller(Node):
         LOGGER.info(command)
         self.setDriver("ST", 0, report=True, force=True)
         self.Notices.clear()
-        if self.mqttc:
+        if self.mqtt_bridge:
+            self.mqtt_bridge.stop()
+        elif self.mqttc:
             self.mqttc.loop_stop()
             self.mqttc.disconnect()
         LOGGER.info("NodeServer stopped.")
