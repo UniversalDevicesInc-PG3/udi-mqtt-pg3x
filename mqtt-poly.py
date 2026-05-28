@@ -20,62 +20,9 @@ from nodes import Controller
 
 LOGGER = udi_interface.LOGGER
 
-VERSION = "0.50.0"
+VERSION = "0.50.1"
 
-"""
-0.50.0
-DONE refactor Controller/Nodes for Pythonic & commenting
-DONE add user defined default status_prefix & cmd_prefix
-DONE add numofnodes
-DONE add MQDroplet device
-
-0.40.3
-DONE: fixed typos in POLYGLOT_CONFIG.md
-STARTED: Organize device types according to Tasmota, Sensor etc.
-TODO: Reorganize sample devfile for clarity and comments
-
-0.40.2
-DONE README.md clean-up
-DONE POLYGLOT_CONFIG.md clean-up
-
-0.40.1
-DONE s31 displays in program
-
-0.40.0
-DONE change numbering to allow for branch management
-DONE raw fix docs & allow int in addition to str
-DONE find topic by topic if no device_id find
-DONE:discover button updates nodes and MQTT subscriptions
-DONE config.md fixes
-DONE status for switch device available in programs
-DONE internal: improve logging for debug
-DONE:   Changed versioning so git branches and hot fixes can work.
-          so 0.40.0 means it will be on branch 0.40 with the last .0
-          reserved for hotfixes.  These will then be pushed by PG3 to users
-DONE:   Switch make Status available in IF for programs
-DONE:   Parameters are not initially populated, plugin uses the following defaults:
-           mqtt_server = LocalHost
-           mqtt_port = 1884
-           mutt-user = admin (same as None)
-           mqtt_password = admin (same as None)
-DONE:   'raw' fix docs and allow to take int type in addition to str
-DONE:   discover button updates nodes and MQTT subscriptions
-DONE:   internal: improve logging for debug
-DONE:   S31 debug: displays in program now *** need to know it works
-
-Previous versions:
-
-0.0.39
-DEBUG discover bug fix
-
-0.0.38
-DONE change node throttling timer from 0.1s to 0.2s
-
-0.0.37
-DONE re-factor files separating controller and nodes
-DONE fix adding & removal of nodes during start-up and/or discovery
-
-"""
+# Version history: see CHANGELOG.md
 
 if __name__ == "__main__":
     polyglot = None

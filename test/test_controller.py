@@ -16,16 +16,16 @@ import pytest
 from unittest.mock import Mock, patch
 import json
 import yaml
-from nodes.Controller import (
-    Controller,
+from nodes.constants import (
     DEFAULT_CONFIG,
     STATUS_TOPIC_PREFIX,
     TELE_TOPIC_PREFIX,
     RESULT_TOPIC_SUFFIX,
     STATUS10_TOPIC_SUFFIX,
     SENSOR_PROCESSORS,
-    DEVICE_CONFIG,
 )
+from nodes.device_registry import DEVICE_CONFIG
+from nodes.Controller import Controller
 
 
 class TestControllerInitialization:
@@ -471,7 +471,7 @@ class TestControllerHandleLevelChange:
 
     def test_handle_level_change_debug(self, controller):
         """Test handling log level change to DEBUG."""
-        with patch("nodes.Controller.LOGGER") as _mock_logger:
+        with patch("nodes.config_loader.LOGGER") as _mock_logger:
             with patch("nodes.Controller.LOG_HANDLER") as mock_handler:
                 controller.handleLevelChange({"level": 5})  # Level is a dict
 
@@ -744,16 +744,16 @@ class TestControllerMqttPub:
             setattr(poly, attr, attr)
 
         c = Controller(poly, "controller", "controller", "MQTT")
-        c.mqttc = Mock()
-        c.mqttc.publish = Mock()
+        c.mqtt_bridge = Mock()
+        c.mqtt_bridge.publish = Mock()
         return c
 
     def test_mqtt_pub_publishes_message(self, controller):
         """Test that mqtt_pub publishes message."""
         controller.mqtt_pub("test/topic", "test_message")
 
-        controller.mqttc.publish.assert_called_once_with(
-            "test/topic", "test_message", retain=False
+        controller.mqtt_bridge.publish.assert_called_once_with(
+            "test/topic", "test_message"
         )
 
 
@@ -937,40 +937,31 @@ class TestControllerMqttSubscribe:
             setattr(poly, attr, attr)
 
         c = Controller(poly, "controller", "controller", "MQTT")
-        c.mqttc = Mock()
+        c.mqtt_bridge = Mock()
+        c.mqtt_bridge.subscribe = Mock()
         c.status_topics = ["topic1", "topic2"]
         c.address = "controller"
         return c
 
     def test_mqtt_subscribe_success(self, controller):
         """Test successful MQTT subscription."""
-        # Mock subscribe to return success (0, mid)
-        controller.mqttc.subscribe = Mock(return_value=(0, 123))
-
         mock_node = Mock()
         mock_node.query = Mock()
         controller.poly.getNode.return_value = mock_node
 
         controller.mqtt_subscribe()
 
-        # Should subscribe to all topics
-        assert controller.mqttc.subscribe.call_count == 2
-        # Should query child nodes
-        mock_node.query.assert_called()
+        controller.mqtt_bridge.subscribe.assert_called_once()
 
     def test_mqtt_subscribe_failure(self, controller):
-        """Test MQTT subscription with failure."""
-        # Mock subscribe to return failure (1, mid)
-        controller.mqttc.subscribe = Mock(return_value=(1, 456))
-
+        """Test MQTT subscription delegates to bridge."""
         mock_node = Mock()
         mock_node.query = Mock()
         controller.poly.getNode.return_value = mock_node
 
         controller.mqtt_subscribe()
 
-        # Should still attempt all subscriptions
-        assert controller.mqttc.subscribe.call_count == 2
+        controller.mqtt_bridge.subscribe.assert_called_once()
 
 
 class TestControllerDelete:
@@ -1478,7 +1469,7 @@ class TestControllerConfigErrors:
     def test_load_devfile_not_found(self, controller):
         """Test _load_devfile_config with a nonexistent file."""
         with patch("builtins.open", side_effect=FileNotFoundError("File not found")):
-            with patch("nodes.Controller.LOGGER") as mock_logger:
+            with patch("nodes.config_loader.LOGGER") as mock_logger:
                 result = controller._load_devfile_config()
                 assert result is False
                 mock_logger.error.assert_called_with(
@@ -1489,7 +1480,7 @@ class TestControllerConfigErrors:
         """Test _load_devfile_config with invalid YAML content."""
         with patch("builtins.open"):
             with patch("yaml.safe_load", side_effect=yaml.YAMLError("YAML error")):
-                with patch("nodes.Controller.LOGGER") as mock_logger:
+                with patch("nodes.config_loader.LOGGER") as mock_logger:
                     result = controller._load_devfile_config()
                     assert result is False
                     mock_logger.error.assert_called_with(
@@ -1500,7 +1491,7 @@ class TestControllerConfigErrors:
         """Test _load_devfile_config with YAML missing 'devices' section."""
         with patch("builtins.open"):
             with patch("yaml.safe_load", return_value={"general": []}):
-                with patch("nodes.Controller.LOGGER") as mock_logger:
+                with patch("nodes.config_loader.LOGGER") as mock_logger:
                     result = controller._load_devfile_config()
                     assert result is False
                     mock_logger.error.assert_called_with(
@@ -1510,7 +1501,7 @@ class TestControllerConfigErrors:
     def test_load_devlist_invalid_json(self, controller):
         """Test _load_devlist_config with invalid JSON."""
         controller.Parameters = {"devlist": "invalid-json"}
-        with patch("nodes.Controller.LOGGER") as mock_logger:
+        with patch("nodes.config_loader.LOGGER") as mock_logger:
             result = controller._load_devlist_config()
             assert result is False
             mock_logger.error.assert_called()
@@ -1530,7 +1521,7 @@ class TestControllerConfigErrors:
     def test_load_devlist_invalid_entry_type(self, controller):
         """Test _load_devlist_config rejects non-object list entries."""
         controller.Parameters = {"devlist": "[1, 2, 3]"}
-        with patch("nodes.Controller.LOGGER") as mock_logger:
+        with patch("nodes.config_loader.LOGGER") as mock_logger:
             result = controller._load_devlist_config()
             assert result is False
             mock_logger.error.assert_called_with(
@@ -1540,7 +1531,7 @@ class TestControllerConfigErrors:
     def test_load_devlist_unsupported_type(self, controller):
         """Test _load_devlist_config rejects unsupported top-level types."""
         controller.Parameters = {"devlist": '"just-a-string"'}
-        with patch("nodes.Controller.LOGGER") as mock_logger:
+        with patch("nodes.config_loader.LOGGER") as mock_logger:
             result = controller._load_devlist_config()
             assert result is False
             mock_logger.error.assert_called_with(
@@ -1554,7 +1545,7 @@ class TestControllerConfigErrors:
 
         # Patch DEFAULT_CONFIG to ensure _get_int returns None
         with patch.dict(DEFAULT_CONFIG, {"mqtt_port": None}):
-            with patch("nodes.Controller.LOGGER") as mock_logger:
+            with patch("nodes.config_loader.LOGGER") as mock_logger:
                 result = controller._load_mqtt_parameters()
                 assert result is False
                 mock_logger.error.assert_called()
