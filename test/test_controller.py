@@ -910,6 +910,85 @@ class TestControllerCleanupNodes:
         assert controller._remove_status_topics.call_count == 2
 
 
+class TestControllerRemoveStatusTopics:
+    """Tests for MQTT unsubscribe during topic cleanup."""
+
+    @pytest.fixture
+    def controller(self):
+        poly = Mock()
+        poly.subscribe = Mock()
+        poly.ready = Mock()
+        poly.db_getNodeDrivers = Mock(return_value=[])
+        for attr in [
+            "START",
+            "POLL",
+            "LOGLEVEL",
+            "CUSTOMPARAMS",
+            "CUSTOMDATA",
+            "STOP",
+            "DISCOVER",
+            "CUSTOMTYPEDPARAMS",
+            "CUSTOMTYPEDDATA",
+            "ADDNODEDONE",
+        ]:
+            setattr(poly, attr, attr)
+
+        c = Controller(poly, "controller", "controller", "MQTT")
+        c.mqtt_bridge = Mock()
+        c.mqtt_bridge.unsubscribe = Mock()
+        c.status_topics = ["stat/switch1/POWER", "tele/switch1/SENSOR"]
+        c.status_topics_to_devices = {
+            "stat/switch1/POWER": "switch1",
+            "tele/switch1/SENSOR": "switch1",
+        }
+        return c
+
+    def test_remove_status_topics_unsubscribes(self, controller):
+        controller._remove_status_topics("switch1")
+
+        controller.mqtt_bridge.unsubscribe.assert_called_once_with(
+            ["stat/switch1/POWER", "tele/switch1/SENSOR"]
+        )
+        assert controller.status_topics == []
+        assert controller.status_topics_to_devices == {}
+
+
+class TestDiscoveryTopicRegistration:
+    """Tests for discovery topic deduplication."""
+
+    @pytest.fixture
+    def controller(self):
+        poly = Mock()
+        poly.subscribe = Mock()
+        poly.ready = Mock()
+        poly.db_getNodeDrivers = Mock(return_value=[])
+        poly.getValidAddress = Mock(side_effect=lambda name: name)
+        for attr in [
+            "START",
+            "POLL",
+            "LOGLEVEL",
+            "CUSTOMPARAMS",
+            "CUSTOMDATA",
+            "STOP",
+            "DISCOVER",
+            "CUSTOMTYPEDPARAMS",
+            "CUSTOMTYPEDDATA",
+            "ADDNODEDONE",
+        ]:
+            setattr(poly, attr, attr)
+
+        c = Controller(poly, "controller", "controller", "MQTT")
+        c.status_prefix = None
+        return c
+
+    def test_add_status_topics_skips_duplicate_topic(self, controller):
+        dev = {"id": "switch1", "type": "switch"}
+        controller._add_status_topics(dev, ["stat/switch1/POWER"])
+        controller._add_status_topics(dev, ["stat/switch1/POWER"])
+
+        assert controller.status_topics.count("stat/switch1/POWER") == 1
+
+
 class TestControllerMqttSubscribe:
     """Tests for mqtt_subscribe method."""
 
@@ -1390,7 +1469,7 @@ class TestControllerOnMessage:
         # Note: The address is derived from the devlist id, not the mapped address in this case
         controller.poly.getNode.assert_called_once_with("sensor1")
         controller.poly.getNode.return_value.updateInfo.assert_called_once_with(
-            payload, topic
+            '{"BME280":{"Temperature":25.0}}', topic
         )
 
     def test_on_message_unhandled_topic(self, controller):

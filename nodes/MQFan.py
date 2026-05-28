@@ -12,9 +12,6 @@ import json
 # external libraries
 from udi_interface import Node, LOGGER
 
-# personal libraries
-pass
-
 # Constants
 FAN_OFF = 0
 FAN_LOW = 1

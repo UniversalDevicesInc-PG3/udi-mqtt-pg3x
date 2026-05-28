@@ -126,12 +126,11 @@ class TestMQAnalogUpdateInfo:
         assert calls[1] == (("GPV", 256),)
 
     def test_update_info_tasmota_wrapper(self, single_sensor):
-        """Test handling Tasmota StatusSNS wrapper."""
-        payload = json.dumps({"StatusSNS": {"ANALOG": {"A0": 1024}}})
+        """Test handling normalized Tasmota ANALOG payload from Controller."""
+        payload = json.dumps({"ANALOG": {"A0": 1024}})
 
         single_sensor.updateInfo(payload, "test/state")
 
-        # Should unwrap StatusSNS and process
         calls = single_sensor.setDriver.call_args_list
         assert len(calls) == 2
         assert calls[0] == (("ST", 1),)
@@ -225,7 +224,7 @@ class TestMQAnalogUpdateInfo:
 
     def test_update_info_tasmota_with_multi_sensor(self, multi_sensor):
         """Test Tasmota wrapper with multi-sensor mode."""
-        payload = json.dumps({"StatusSNS": {"ANALOG": {"A0": 333, "A1": 444}}})
+        payload = json.dumps({"ANALOG": {"A0": 333, "A1": 444}})
 
         multi_sensor.updateInfo(payload, "test/state")
 
@@ -377,7 +376,7 @@ class TestMQAnalogIntegration:
 
         # Tasmota sends StatusSNS wrapper
         payload = json.dumps(
-            {"StatusSNS": {"Time": "2025-01-01T12:00:00", "ANALOG": {"A0": 1024}}}
+            {"Time": "2025-01-01T12:00:00", "ANALOG": {"A0": 1024}}
         )
 
         sensor.updateInfo(payload, "home/adc/tele/SENSOR")
@@ -397,7 +396,7 @@ class TestMQAnalogIntegration:
 
         # Simulate response
         sensor.setDriver.reset_mock()
-        payload = json.dumps({"StatusSNS": {"ANALOG": {"A0": 555}}})
+        payload = json.dumps({"ANALOG": {"A0": 555}})
         sensor.updateInfo(payload, "home/adc/state")
 
         assert sensor.setDriver.call_args_list[1] == (("GPV", 555),)

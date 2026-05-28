@@ -22,9 +22,10 @@ from udi_interface import Node, LOGGER, Custom, LOG_HANDLER
 
 # local modules
 from . import config_loader
+from . import discovery
 from .constants import SENSOR_PROCESSORS
-from .device_registry import DEVICE_CONFIG
 from .mqtt_bridge import MqttBridge
+from .tasmota_payload import parse_mqtt_json
 
 
 class Controller(Node):
@@ -508,7 +509,7 @@ class Controller(Node):
         if self.checkParams() and self._discover():
             success = True
             LOGGER.info("Discovery Success")
-            if getattr(self, "mqttc", None) and self.mqttc.is_connected():
+            if self.mqtt_bridge and self.mqtt_bridge.client and self.mqtt_bridge.client.is_connected():
                 self.mqtt_subscribe()
         else:
             LOGGER.error("Discovery Failure")
@@ -516,250 +517,40 @@ class Controller(Node):
         return success
 
     def _discover(self):
-        """Discover devices and manage node lifecycle.
-
-        Performs the actual device discovery process, including:
-        1. Creating new nodes for discovered devices
-        2. Cleaning up nodes that are no longer in the configuration
-        3. Updating the node count
-
-        Returns:
-            bool: True if discovery completed successfully, False otherwise.
-        """
-        success = False
-        nodes_existing = self.poly.getNodes()
-        LOGGER.debug(f"current nodes = {nodes_existing}")
-        nodes_old = [node for node in nodes_existing if node != self.id]
-        nodes_new = []
-
-        try:
-            self._discover_nodes(nodes_existing, nodes_new)
-            self._cleanup_nodes(nodes_new, nodes_old)
-            self.numNodes = len(nodes_new)
-            self.setDriver("GV0", self.numNodes)
-            success = True
-            LOGGER.info(f"Discovery complete. success = {success}")
-        except Exception as ex:
-            LOGGER.error(f"Discovery Failure: {ex}", exc_info=True)
-        return success
+        """Discover devices and manage node lifecycle."""
+        return discovery.discover_devices(self)
 
     def _discover_nodes(self, nodes_existing, nodes_new):
-        """Discover and create device nodes.
-
-        Validates device configurations, sets names and addresses, and creates
-        new nodes for devices that don't already exist in the system.
-
-        Args:
-            nodes_existing (dict): Dictionary of existing nodes.
-            nodes_new (list): List to track newly created nodes.
-
-        Returns:
-            None
-        """
-        LOGGER.info("discovery start")
-        self.discovery_in = True
-        for dev in self.devlist:
-            if not self._validate_device_definition(dev):
-                continue
-
-            name = dev.get("name", dev["id"])  # Use friendly name or fallback to ID
-            address = self._format_device_address(dev)
-
-            if address not in nodes_existing:
-                if not self._create_device_node(dev, name, address):
-                    continue
-                self.wait_for_node_done()
-            nodes_new.append(address)
-        LOGGER.info("Done adding nodes.")
-        LOGGER.debug(f"DEVLIST: {self.devlist}")
+        """Discover and create device nodes."""
+        return discovery.discover_nodes(self, nodes_existing, nodes_new)
 
     def _validate_device_definition(self, dev):
-        """Validate device configuration has required fields.
-
-        Checks that a device configuration contains all required fields
-        for proper operation.
-
-        Args:
-            dev (dict): Device configuration to validate.
-
-        Returns:
-            bool: True if device is valid, False otherwise.
-        """
-        required_fields = ["id", "status_topic", "cmd_topic", "type"]
-        if not all(field in dev for field in required_fields):
-            LOGGER.error(f"Invalid device definition: {json.dumps(dev)}")
-            return False
-        return True
+        """Validate device configuration has required fields."""
+        return discovery.validate_device_definition(dev)
 
     def _create_device_node(self, dev, name, address):
-        """Create a device node from configuration.
-
-        Creates a new device node using the validated device configuration.
-        The node type is determined from the device configuration and the
-        appropriate node class is instantiated.
-
-        Args:
-            dev (dict): Device configuration.
-            name (str): Human-readable name for the device.
-            address (str): Unique address for the device node.
-
-        Returns:
-            bool: True if node created successfully, False otherwise.
-        """
-        device_type = dev["type"]
-
-        # Check if device type is supported
-        if device_type not in DEVICE_CONFIG:
-            LOGGER.error(f"Device type {device_type} is not yet supported")
-            return False
-
-        # Get the node class
-        device_config = DEVICE_CONFIG[device_type]
-        node_class = device_config["node_class"]
-
-        # Normalize the device's primary status topic
-        dev["status_topic"] = self._normalize_topic(
-            dev["status_topic"], self.status_prefix
-        )
-
-        # Normalize the device's control topic
-        dev["cmd_topic"] = self._normalize_topic(dev["cmd_topic"], self.cmd_prefix)
-
-        # Add status topics using device configuration
-        self._add_device_status_topics(dev)
-
-        # and create the node
-        LOGGER.info(f"Adding {device_type}, {name}")
-        self.poly.addNode(node_class(self.poly, self.address, address, name, dev))
-
-        return True
+        """Create a device node from configuration."""
+        return discovery.create_device_node(self, dev, name, address)
 
     def _add_device_status_topics(self, dev):
-        """Add status topics for a device based on its configuration.
-
-        Adds MQTT status topics for a device based on its type and configuration.
-        This includes both primary status topics and any extra topics defined
-        in the device configuration.
-
-        Args:
-            dev (dict): Device configuration.
-
-        Returns:
-            None
-        """
-        device_type = dev["type"]
-        device_config = DEVICE_CONFIG.get(device_type, {})
-
-        # Get primary status topics
-        if "status_topics" in device_config:
-            # Custom status topics (like shellyflood, ratgdo)
-            status_topics = device_config["status_topics"](dev)
-            self._add_status_topics(dev, status_topics)
-        else:
-            # Default single status topic
-            self._add_status_topics(dev, [dev["status_topic"]])
-
-        # Add extra status topics if configured
-        if "extra_status_topics" in device_config:
-            extra_topics = device_config["extra_status_topics"](dev)
-            # Store extra status topic in device for logging
-            if extra_topics:
-                dev["extra_status_topic"] = extra_topics[0]
-                LOGGER.info(
-                    f'Adding EXTRA {dev["extra_status_topic"]} for {dev.get("name", dev["id"])}'
-                )
-            self._add_status_topics(dev, extra_topics)
+        """Add status topics for a device based on its configuration."""
+        return discovery.add_device_status_topics(self, dev)
 
     def _add_status_topics(self, dev, status_topics: List[str]):
-        """Add status topics and map them to device address.
-
-        Adds a list of status topics to the subscription list and maps each
-        topic to the corresponding device address for message routing.
-
-        Args:
-            dev (dict): Device configuration.
-            status_topics (List[str]): List of MQTT status topics to add.
-
-        Returns:
-            None
-        """
-        device_address = self._format_device_address(dev)
-
-        for raw_topic in status_topics:
-            status_topic = self._normalize_topic(raw_topic, self.status_prefix)
-            self.status_topics.append(status_topic)
-            self.status_topics_to_devices[status_topic] = device_address
+        """Add status topics and map them to device address."""
+        return discovery.add_status_topics(self, dev, status_topics)
 
     def _normalize_topic(self, topic: Optional[str], prefix: Optional[str]) -> str:
-        """Normalize MQTT topic by replacing placeholder with prefix.
-
-        Replaces leading '~' in a topic with the given prefix. This allows
-        for flexible topic configuration where '~' acts as a placeholder
-        for the actual prefix.
-
-        Args:
-            topic (Optional[str]): MQTT topic to normalize.
-            prefix (Optional[str]): Prefix to replace '~' with.
-
-        Returns:
-            str: Normalized topic string.
-        """
-        if topic is None:
-            return ""
-        if topic.startswith("~") and prefix is not None:
-            return prefix + topic[1:]
-        return topic
+        """Normalize MQTT topic by replacing placeholder with prefix."""
+        return discovery.normalize_topic(topic, prefix)
 
     def _cleanup_nodes(self, nodes_new, nodes_old):
-        """Remove nodes that are no longer in the device list.
-
-        Compares existing nodes with the current device list and removes
-        any nodes that are no longer configured.
-
-        Args:
-            nodes_new (list): List of newly created nodes.
-            nodes_old (list): List of existing nodes to check for removal.
-
-        Returns:
-            bool: Always returns True.
-        """
-        for node in nodes_old:
-            if node not in nodes_new:
-                LOGGER.info(f"need to delete node {node}")
-                self._remove_status_topics(node)
-                self.poly.delNode(node)
-                self.discovery_in = False
-                LOGGER.info("Done Cleanup")
-        return True
+        """Remove nodes that are no longer in the device list."""
+        return discovery.cleanup_nodes(self, nodes_new, nodes_old)
 
     def _remove_status_topics(self, node):
-        """Remove status topics for a deleted node.
-
-        Removes all status topics associated with a node that is being
-        deleted from the system.
-
-        Args:
-            node (str): Node address to remove topics for.
-
-        Returns:
-            None
-        """
-        topics_to_remove = []
-        # Collect topics associated with the node to be removed
-        for status_topic, device_address in self.status_topics_to_devices.items():
-            if device_address == node:
-                topics_to_remove.append(status_topic)
-
-        # Remove the collected topics
-        if topics_to_remove and self.mqtt_bridge:
-            self.mqtt_bridge.unsubscribe(topics_to_remove)
-
-        for status_topic in topics_to_remove:
-            if status_topic in self.status_topics:
-                self.status_topics.remove(status_topic)
-            if status_topic in self.status_topics_to_devices:
-                self.status_topics_to_devices.pop(status_topic)
-                LOGGER.info(f"Removed subscription for topic: {status_topic}")
+        """Remove status topics for a deleted node."""
+        return discovery.remove_status_topics(self, node)
 
     def _on_connect(self, _mqttc, _userdata, _flags, rc):
         """Handle MQTT connection events.
@@ -804,7 +595,6 @@ class Controller(Node):
                 self.mqttc.reconnect()
             except Exception as ex:
                 LOGGER.error(f"Error connecting to Poly MQTT broker {ex}")
-                return False
         else:
             LOGGER.info("Poly MQTT graceful disconnection")
 
@@ -845,41 +635,20 @@ class Controller(Node):
             LOGGER.error(f"Failed to process message from {topic}: {ex}")
 
     def _parse_json_payload(self, payload: str) -> Optional[Dict[str, Any]]:
-        """Parse JSON payload with proper error handling.
-
-        Args:
-            payload (str): Raw message payload to parse.
-
-        Returns:
-            Optional[Dict[str, Any]]: Parsed JSON data or None if not JSON.
-        """
-        try:
-            return json.loads(payload)
-        except (json.JSONDecodeError, TypeError):
-            return None
+        """Parse JSON payload and unwrap Tasmota StatusSNS envelopes."""
+        return parse_mqtt_json(payload)
 
     def _process_json_message(
         self, topic: str, payload: str, data: Dict[str, Any]
     ) -> None:
-        """Process JSON-formatted MQTT message.
+        """Process JSON-formatted MQTT message."""
+        normalized_payload = json.dumps(data, separators=(",", ":"))
 
-        Args:
-            topic (str): MQTT topic of the message.
-            payload (str): Raw message payload.
-            data (Dict[str, Any]): Parsed JSON data.
-        """
-        # Extract StatusSNS data if present
-        if "StatusSNS" in data:
-            data = data["StatusSNS"]
-            LOGGER.debug(f"StatusSNS data: {data}")
-
-        # Try to process as sensor data first
-        if self._process_sensor_data(topic, payload, data):
+        if self._process_sensor_data(topic, normalized_payload, data):
             return
 
-        # Process as regular JSON message
-        LOGGER.debug(f"Processing JSON message: {payload}")
-        self._route_message_to_device(topic, payload)
+        LOGGER.debug(f"Processing JSON message: {normalized_payload}")
+        self._route_message_to_device(topic, normalized_payload)
 
     def _process_sensor_data(
         self, topic: str, payload: str, data: Dict[str, Any]
@@ -1022,27 +791,8 @@ class Controller(Node):
         return node_id
 
     def _format_device_address(self, dev) -> str:
-        """Format device address for ISY compatibility.
-
-        Creates a device address from the device ID that is compatible with
-        ISY address requirements. The address is limited to 14 characters
-        and special characters are normalized.
-
-        Args:
-            dev (dict): Device configuration containing the 'id' field.
-
-        Returns:
-            str: Formatted device address suitable for ISY.
-        """
-        # was return dev["id"].lower().replace("_", "").replace("-", "_")[:DEVICE_ADDRESS_MAX_LENGTH]
-        # poly funciton:
-        # def getValidAddress(self, name):
-        #     name = bytes(name, 'utf-8').decode('utf-8','ignore')
-        #     return re.sub(r"[<>`~!@#$%^&*(){}[\]?/\\;:\"'\-]+", "", name.lower())[:14]
-
-        # retaining former replace function for backward compatibility
-        name = dev["id"].replace("_", "").replace("-", "_")
-        return self.poly.getValidAddress(name)
+        """Format device address for ISY compatibility."""
+        return discovery.format_device_address(self, dev)
 
     def mqtt_pub(self, topic, message):
         """Publish a message to an MQTT topic."""

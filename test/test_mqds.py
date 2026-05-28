@@ -133,8 +133,8 @@ class TestMQdsUpdateInfo:
         ds.setDriver.assert_any_call("CLITEMP", 212.0)
 
     def test_update_info_tasmota_statussns_wrapper(self, ds):
-        """Test handling Tasmota StatusSNS wrapper."""
-        payload = '{"StatusSNS": {"DS18B20": {"Temperature": 68.5}}}'
+        """Test handling normalized Tasmota sensor payload from Controller."""
+        payload = '{"DS18B20": {"Temperature": 68.5}}'
         ds.updateInfo(payload, "test/ds/state")
 
         ds.setDriver.assert_any_call("ST", 1)
@@ -384,7 +384,7 @@ class TestMQdsIntegration:
         ds.controller.mqtt_pub.assert_called_with("home/bedroom/ds/Status", "10")
 
         # Device responds with Tasmota StatusSNS format
-        payload = '{"StatusSNS": {"DS18B20": {"Temperature": 68.5}}}'
+        payload = '{"DS18B20": {"Temperature": 68.5}}'
         ds.updateInfo(payload, "home/bedroom/ds/state")
 
         # Verify data was extracted correctly
