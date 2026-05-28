@@ -40,9 +40,6 @@ import json
 # external libraries
 from udi_interface import Node, LOGGER
 
-# personal libraries
-pass
-
 
 class MQDroplet(Node):
     """Node representing a Droplet flow and volume sensor."""

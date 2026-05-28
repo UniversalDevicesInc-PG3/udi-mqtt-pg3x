@@ -232,8 +232,9 @@ class TestLegacyStartupAndRouting:
         controller.checkParams = Mock(return_value=True)
         controller._discover = Mock(return_value=True)
         controller.mqtt_subscribe = Mock()
-        controller.mqttc = Mock()
-        controller.mqttc.is_connected.return_value = True
+        controller.mqtt_bridge = Mock()
+        controller.mqtt_bridge.client = Mock()
+        controller.mqtt_bridge.client.is_connected.return_value = True
 
         assert controller.discover_cmd("DISCOVER") is True
         controller.mqtt_subscribe.assert_called_once()

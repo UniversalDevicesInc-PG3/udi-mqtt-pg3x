@@ -126,15 +126,13 @@ class TestMQdhtUpdateInfo:
         assert calls[3] == (("DEWPT", None),)
 
     def test_update_info_tasmota_statussns_wrapper(self, dht_node):
-        """Test handling Tasmota StatusSNS wrapper."""
+        """Test handling normalized Tasmota sensor payload from Controller."""
         payload = json.dumps(
             {
-                "StatusSNS": {
-                    DEFAULT_SENSOR_ID: {
-                        "Temperature": 75.0,
-                        "Humidity": 50.0,
-                        "DewPoint": 55.0,
-                    }
+                DEFAULT_SENSOR_ID: {
+                    "Temperature": 75.0,
+                    "Humidity": 50.0,
+                    "DewPoint": 55.0,
                 }
             }
         )
@@ -301,17 +299,15 @@ class TestMQdhtUpdateInfo:
         assert calls[1] == (("CLITEMP", 70.0),)
 
     def test_update_info_tasmota_statussns_with_other_data(self, dht_node):
-        """Test Tasmota StatusSNS wrapper with additional data."""
+        """Test normalized payload with additional Tasmota fields."""
         payload = json.dumps(
             {
-                "StatusSNS": {
-                    "Time": "2025-01-01T12:00:00",
-                    DEFAULT_SENSOR_ID: {
-                        "Temperature": 73.0,
-                        "Humidity": 48.0,
-                        "DewPoint": 51.0,
-                    },
-                }
+                "Time": "2025-01-01T12:00:00",
+                DEFAULT_SENSOR_ID: {
+                    "Temperature": 73.0,
+                    "Humidity": 48.0,
+                    "DewPoint": 51.0,
+                },
             }
         )
 
@@ -492,12 +488,10 @@ class TestMQdhtIntegration:
         # Receive Tasmota response
         payload = json.dumps(
             {
-                "StatusSNS": {
-                    "AM2301": {
-                        "Temperature": 72.0,
-                        "Humidity": 50.0,
-                        "DewPoint": 52.0,
-                    }
+                "AM2301": {
+                    "Temperature": 72.0,
+                    "Humidity": 50.0,
+                    "DewPoint": 52.0,
                 }
             }
         )
@@ -638,14 +632,12 @@ class TestMQdhtIntegration:
         for temp in [70.0, 71.0, 72.0]:
             payload = json.dumps(
                 {
-                    "StatusSNS": {
-                        "Time": "2025-01-01T12:00:00",
-                        "AM2301": {
-                            "Temperature": temp,
-                            "Humidity": 50.0,
-                            "DewPoint": 52.0,
-                        },
-                    }
+                    "Time": "2025-01-01T12:00:00",
+                    "AM2301": {
+                        "Temperature": temp,
+                        "Humidity": 50.0,
+                        "DewPoint": 52.0,
+                    },
                 }
             )
             dht.updateInfo(payload, "tele/bedroom/dht/stat/STATUS10")
@@ -654,12 +646,10 @@ class TestMQdhtIntegration:
         # Last update should have set temperature to 72.0
         payload = json.dumps(
             {
-                "StatusSNS": {
-                    "AM2301": {
-                        "Temperature": 72.0,
-                        "Humidity": 50.0,
-                        "DewPoint": 52.0,
-                    }
+                "AM2301": {
+                    "Temperature": 72.0,
+                    "Humidity": 50.0,
+                    "DewPoint": 52.0,
                 }
             }
         )

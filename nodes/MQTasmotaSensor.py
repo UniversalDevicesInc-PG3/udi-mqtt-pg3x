@@ -29,14 +29,13 @@ class MQTasmotaSensor(Node):
 
     @staticmethod
     def parse_json_payload(payload: str) -> Optional[Dict[str, Any]]:
-        """Parse MQTT JSON and unwrap Tasmota StatusSNS envelopes."""
+        """Parse normalized MQTT JSON payload from the Controller."""
         try:
             data = json.loads(payload)
         except json.JSONDecodeError:
             return None
-
-        if "StatusSNS" in data:
-            data = data["StatusSNS"]
+        if not isinstance(data, dict):
+            return None
         return data
 
     def query_tasmota_sensors(self, command=None) -> None:

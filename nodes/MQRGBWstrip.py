@@ -15,9 +15,6 @@ import json
 # external libraries
 from udi_interface import Node, LOGGER
 
-# personal libraries
-pass
-
 # Constants
 LED_ON_VALUE = 100
 LED_OFF_VALUE = 0

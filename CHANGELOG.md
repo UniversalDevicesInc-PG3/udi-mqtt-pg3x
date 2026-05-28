@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.50.2
+
+- Extract device discovery and topic registration into discovery module
+- Unwrap Tasmota StatusSNS payloads once in Controller before routing to nodes
+- Skip duplicate status topic registration on re-discovery
+- Remove dead pass stubs from node modules
+- Fix disconnect handler exception path
+
 ## 0.50.1
 
 - Fix startup handler gate when CUSTOMPARAMS arrives last

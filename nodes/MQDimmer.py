@@ -15,9 +15,6 @@ import json
 # external libraries
 from udi_interface import Node, LOGGER
 
-# personal libraries
-pass
-
 # constants
 OFF = 0
 FULL = 100

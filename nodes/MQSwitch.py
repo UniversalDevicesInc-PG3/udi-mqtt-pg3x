@@ -12,9 +12,6 @@ from typing import Optional
 # external libraries
 from udi_interface import Node, LOGGER
 
-# personal libraries
-pass
-
 # constants
 OFF = 0
 ON = 100

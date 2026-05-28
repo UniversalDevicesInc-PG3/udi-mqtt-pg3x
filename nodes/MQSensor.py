@@ -12,9 +12,6 @@ import json
 # external libraries
 from udi_interface import Node, LOGGER
 
-# personal libraries
-pass
-
 
 class MQSensor(Node):
     """Node representing a multi-sensor MQTT device."""

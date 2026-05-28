@@ -14,9 +14,6 @@ import json
 # external libraries
 from udi_interface import Node, LOGGER
 
-# personal libraries
-pass
-
 # Constants
 SENSOR_KEY = "ENERGY"
 

@@ -140,15 +140,13 @@ class TestMQbmeUpdateInfo:
         assert not any(call[0][0] == "BARPRES" for call in bme.setDriver.call_args_list)
 
     def test_update_info_tasmota_statussns_wrapper(self, bme):
-        """Test handling Tasmota StatusSNS wrapper."""
+        """Test handling normalized Tasmota sensor payload from Controller."""
         payload = """{
-            "StatusSNS": {
-                "BME280": {
-                    "Temperature": 68.5,
-                    "Humidity": 55.0,
-                    "DewPoint": 53.0,
-                    "Pressure": 1020.5
-                }
+            "BME280": {
+                "Temperature": 68.5,
+                "Humidity": 55.0,
+                "DewPoint": 53.0,
+                "Pressure": 1020.5
             }
         }"""
         bme.updateInfo(payload, "test/bme/state")
@@ -457,13 +455,11 @@ class TestMQbmeIntegration:
 
         # Device responds with Tasmota StatusSNS format
         payload = """{
-            "StatusSNS": {
-                "BME280": {
-                    "Temperature": 68.5,
-                    "Humidity": 55.0,
-                    "DewPoint": 53.0,
-                    "Pressure": 1020.5
-                }
+            "BME280": {
+                "Temperature": 68.5,
+                "Humidity": 55.0,
+                "DewPoint": 53.0,
+                "Pressure": 1020.5
             }
         }"""
         bme.updateInfo(payload, "home/bedroom/bme/state")
