@@ -14,6 +14,7 @@ Tests cover:
 
 import pytest
 from unittest.mock import Mock, patch
+import json
 import yaml
 from nodes.Controller import (
     Controller,
@@ -132,6 +133,7 @@ class TestControllerConstants:
             "raw",
             "RGBW",
             "ratgdo",
+            "droplet",
         ]
         for dev_type in expected_types:
             assert dev_type in DEVICE_CONFIG
@@ -515,6 +517,12 @@ class TestControllerPoll:
 
         # Heartbeat toggles between True/False
         assert controller.hb != initial_hb
+
+    def test_poll_skips_when_not_ready(self, controller):
+        """Test that poll does nothing before startup completes."""
+        controller.reportCmd = Mock()
+        controller.poll({"shortPoll": True})
+        controller.reportCmd.assert_not_called()
 
     def test_poll_sets_driver(self, controller):
         """Test that poll calls reportCmd."""
@@ -1145,12 +1153,35 @@ class TestControllerCheckParams:
     def test_check_params_with_devfile(self, controller):
         """Test checkParams with devfile."""
         controller.Parameters = Mock()
-        controller.Parameters.get = Mock(return_value="file.yaml")
+        controller.Parameters.get = Mock(
+            side_effect=lambda x: "file.yaml" if x == "devfile" else None
+        )
 
         result = controller.checkParams()
 
         assert result is True
         controller._load_devfile_config.assert_called_once()
+        controller._load_devlist_config.assert_not_called()
+        controller._load_mqtt_parameters.assert_called_once()
+
+    def test_check_params_with_devfile_and_devlist(self, controller):
+        """Test checkParams loads devfile then merges devlist."""
+
+        def mock_get(x):
+            if x == "devfile":
+                return "file.yaml"
+            if x == "devlist":
+                return "[]"
+            return None
+
+        controller.Parameters = Mock()
+        controller.Parameters.get = Mock(side_effect=mock_get)
+
+        result = controller.checkParams()
+
+        assert result is True
+        controller._load_devfile_config.assert_called_once()
+        controller._load_devlist_config.assert_called_once()
         controller._load_mqtt_parameters.assert_called_once()
 
     def test_check_params_with_devlist(self, controller):
@@ -1368,7 +1399,7 @@ class TestControllerOnMessage:
         # Note: The address is derived from the devlist id, not the mapped address in this case
         controller.poly.getNode.assert_called_once_with("sensor1")
         controller.poly.getNode.return_value.updateInfo.assert_called_once_with(
-            payload, topic, "BME280"
+            payload, topic
         )
 
     def test_on_message_unhandled_topic(self, controller):
@@ -1484,13 +1515,37 @@ class TestControllerConfigErrors:
             assert result is False
             mock_logger.error.assert_called()
 
-    def test_load_devlist_not_a_dictionary(self, controller):
-        """Test _load_devlist_config with JSON that is not a dictionary."""
-        controller.Parameters = {"devlist": "[1, 2, 3]"}  # JSON list
+    def test_load_devlist_json_array(self, controller):
+        """Test _load_devlist_config with documented JSON array format."""
+        controller.Parameters = {
+            "devlist": json.dumps(
+                [{"id": "device1", "type": "switch", "status_topic": "s", "cmd_topic": "c"}]
+            )
+        }
+        result = controller._load_devlist_config()
+        assert result is True
+        assert len(controller.devlist) == 1
+        assert controller.devlist[0]["id"] == "device1"
+
+    def test_load_devlist_invalid_entry_type(self, controller):
+        """Test _load_devlist_config rejects non-object list entries."""
+        controller.Parameters = {"devlist": "[1, 2, 3]"}
         with patch("nodes.Controller.LOGGER") as mock_logger:
             result = controller._load_devlist_config()
             assert result is False
-            mock_logger.error.assert_called_with("Devlist data must be a dictionary")
+            mock_logger.error.assert_called_with(
+                "Devlist entries must be device dictionaries"
+            )
+
+    def test_load_devlist_unsupported_type(self, controller):
+        """Test _load_devlist_config rejects unsupported top-level types."""
+        controller.Parameters = {"devlist": '"just-a-string"'}
+        with patch("nodes.Controller.LOGGER") as mock_logger:
+            result = controller._load_devlist_config()
+            assert result is False
+            mock_logger.error.assert_called_with(
+                "Devlist data must be a list or dictionary"
+            )
 
     def test_load_mqtt_parameters_invalid_port(self, controller):
         """Test _load_mqtt_parameters with an invalid port."""
