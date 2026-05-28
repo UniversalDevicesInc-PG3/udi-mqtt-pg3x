@@ -9,56 +9,31 @@ This class is an attempt to add support for temperature only sensors.
 was made for DS18B20 waterproof
 """
 
-# std libraries
-import json
+from udi_interface import LOGGER
 
-# external libraries
-from udi_interface import Node, LOGGER
+from .MQTasmotaSensor import DEFAULT_SENSOR_ID, MQTasmotaSensor
 
-# personal libraries
-pass
-
-# Constants
-DEFAULT_SENSOR_ID = "SINGLE_SENSOR"
 FALLBACK_SENSOR_ID = "DS18B20"
 
+__all__ = ["MQds", "DEFAULT_SENSOR_ID", "FALLBACK_SENSOR_ID"]
 
-class MQds(Node):
+
+class MQds(MQTasmotaSensor):
     """Node representing a DS18B20 temperature sensor."""
 
     id = "mqds"
 
     def __init__(self, polyglot, primary, address, name, device):
-        """Initializes the MQds node.
-
-        Args:
-            polyglot: Reference to the Polyglot interface.
-            primary: The address of the parent node.
-            address: The address of this node.
-            name: The name of this node.
-            device: Dictionary containing device-specific information.
-        """
         super().__init__(polyglot, primary, address, name)
-        self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f"{address}:{name}"
-        self.cmd_topic = device["cmd_topic"]
-        self.sensor_id = device.get("sensor_id", DEFAULT_SENSOR_ID)
-        # If sensor_id was not in device, add it for consistency.
-        if "sensor_id" not in device:
-            device["sensor_id"] = self.sensor_id
+        self.init_tasmota_device(polyglot, primary, address, name, device)
 
     def updateInfo(self, payload: str, topic: str):
         """Updates sensor values based on a JSON payload from MQTT."""
         LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
-        try:
-            data = json.loads(payload)
-        except json.JSONDecodeError as e:
-            LOGGER.error(f"Could not decode JSON payload '{payload}': {e}")
+        data = self.parse_json_payload(payload)
+        if data is None:
+            LOGGER.error(f"Could not decode JSON payload '{payload}'")
             return
-
-        # Handle Tasmota StatusSNS wrapper
-        if "StatusSNS" in data:
-            data = data["StatusSNS"]
 
         sensor_data = None
         if self.sensor_id in data:
@@ -85,17 +60,8 @@ class MQds(Node):
         LOGGER.debug(f"{self.lpfx} Exit")
 
     def query(self, command=None):
-        """Handles the 'QUERY' command from ISY.
-
-        Sends a status request to the device.
-        """
-        LOGGER.info(f"{self.lpfx} {command}")
-        # Tasmota: 'Status 10' gets sensor readings
-        query_topic = self.cmd_topic.rsplit("/", 1)[0] + "/Status"
-        self.controller.mqtt_pub(query_topic, "10")
-        LOGGER.debug(f"Query topic: {query_topic}")
-        self.reportDrivers()
-        LOGGER.debug(f"{self.lpfx} Exit")
+        """Handles the 'QUERY' command from ISY."""
+        self.query_tasmota_sensors(command)
 
     """
     UOMs:
@@ -111,10 +77,6 @@ class MQds(Node):
         {"driver": "CLITEMP", "value": 0, "uom": 17, "name": "Temperature"},
     ]
 
-    """
-    Commands that this node can handle.
-    Should match the 'accepts' section of the nodedef file.
-    """
     commands = {
         "QUERY": query,
     }
