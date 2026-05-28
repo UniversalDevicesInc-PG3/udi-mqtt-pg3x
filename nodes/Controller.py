@@ -51,6 +51,8 @@ DEFAULT_CONFIG = {
     "cmd_prefix": None,
 }
 
+MQTT_CONNECT_WAIT_SEC = 60
+
 STATUS_TOPIC_PREFIX = "stat/"
 TELE_TOPIC_PREFIX = "tele/"
 RESULT_TOPIC_SUFFIX = "/RESULT"
@@ -110,7 +112,11 @@ DEVICE_CONFIG = {
     },
     "shellyflood": {
         "node_class": MQShellyFlood,
-        "status_topics": lambda dev: dev["status_topic"],  # Already a list
+        "status_topics": lambda dev: (
+            dev["status_topic"]
+            if isinstance(dev["status_topic"], list)
+            else [dev["status_topic"]]
+        ),
     },
     "analog": {
         "node_class": MQAnalog,
@@ -227,6 +233,7 @@ class Controller(Node):
         self.devlist = []
         # e.g. [{'id': 'topic1', 'type': 'switch', 'status_topic': 'stat/topic1/power',
         # 'cmd_topic': 'cmnd/topic1/power'}]
+        self.general: Dict[str, Any] = {}
         self.status_topics = []
 
         # Maps to device IDs
@@ -372,7 +379,16 @@ class Controller(Node):
             self.Notices["mqtt"] = "Error on user MQTT connection"
             return False  # Early exit on failure
 
+        deadline = time.time() + MQTT_CONNECT_WAIT_SEC
         while not self.mqttc.is_connected():
+            if time.time() >= deadline:
+                LOGGER.error(
+                    "Timed out waiting for MQTT connection after %s seconds",
+                    MQTT_CONNECT_WAIT_SEC,
+                )
+                self.Notices["mqtt"] = "Error on user MQTT connection"
+                self.mqttc.loop_stop()
+                return False
             LOGGER.error("Start: Waiting on user MQTT connection")
             self.Notices["mqtt"] = "Waiting on user MQTT connection"
             time.sleep(3)
@@ -465,6 +481,7 @@ class Controller(Node):
         self.Parameters.load(params)
         self.handler_params_st = True
         LOGGER.info("parmHandler Done...")
+        self.check_handlers()
 
     def typedParameterHandler(self, params):
         """Handle custom typed parameters from Polyglot.
@@ -542,20 +559,24 @@ class Controller(Node):
             successful operation.
         """
 
-        # Load device configuration from YAML file
-        if self.Parameters.get("devfile"):
-            if not self._load_devfile_config():
-                return False
+        has_devfile = bool(self.Parameters.get("devfile"))
+        has_devlist = bool(self.Parameters.get("devlist"))
 
-        # Load device configuration from JSON string
-        elif self.Parameters.get("devlist"):
-            if not self._load_devlist_config():
-                return False
-        else:
+        if not has_devfile and not has_devlist:
             LOGGER.error(
                 "checkParams: No devfile or devlist configured! Must be configured."
             )
             return False
+
+        # Load device configuration from YAML file
+        if has_devfile:
+            if not self._load_devfile_config():
+                return False
+
+        # devlist adds to or overwrites entries from devfile
+        if has_devlist:
+            if not self._load_devlist_config():
+                return False
 
         # Load MQTT parameters with fallback to general config
         if not self._load_mqtt_parameters():
@@ -633,12 +654,18 @@ class Controller(Node):
             else:
                 parsed_data = devlist_data
 
-            if not isinstance(parsed_data, dict):
-                LOGGER.error("Devlist data must be a dictionary")
+            if isinstance(parsed_data, list):
+                for entry in parsed_data:
+                    if not isinstance(entry, dict):
+                        LOGGER.error("Devlist entries must be device dictionaries")
+                        return False
+                    self.upsert_by_id(self.devlist, entry)
+            elif isinstance(parsed_data, dict):
+                # Legacy single-device upsert format
+                self.upsert_by_id(self.devlist, parsed_data)
+            else:
+                LOGGER.error("Devlist data must be a list or dictionary")
                 return False
-
-            # devlist items take precidence over devfile
-            self.upsert_by_id(self.devlist, parsed_data)
         except (json.JSONDecodeError, TypeError) as ex:
             LOGGER.error(f"Failed to parse devlist: {ex}")
             return False
@@ -788,8 +815,8 @@ class Controller(Node):
             None
         """
         # no updates until node is through start-up
-        if not self.ready_event:
-            LOGGER.error("Node not ready yet, exiting")
+        if not self.ready_event.is_set():
+            LOGGER.debug("Node not ready yet, exiting poll")
             return
 
         if "shortPoll" in flag:
@@ -844,6 +871,8 @@ class Controller(Node):
         if self.checkParams() and self._discover():
             success = True
             LOGGER.info("Discovery Success")
+            if getattr(self, "mqttc", None) and self.mqttc.is_connected():
+                self.mqtt_subscribe()
         else:
             LOGGER.error("Discovery Failure")
         self.discovery_in = False
@@ -1282,10 +1311,7 @@ class Controller(Node):
             if device_address:
                 node = self.poly.getNode(device_address)
                 if node:
-                    if sensor:
-                        node.updateInfo(payload, topic, sensor)
-                    else:
-                        node.updateInfo(payload, topic)
+                    node.updateInfo(payload, topic)
                 else:
                     LOGGER.warning(
                         f"Node object not found for address: {device_address}"
