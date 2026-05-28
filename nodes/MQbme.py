@@ -9,56 +9,31 @@ This class is an attempt to add support for temperature/humidity/pressure sensor
 Currently, supports the BME280. Could be extended to accept others.
 """
 
-# std libraries
-import json
+from udi_interface import LOGGER
 
-# external libraries
-from udi_interface import Node, LOGGER
+from .MQTasmotaSensor import DEFAULT_SENSOR_ID, MQTasmotaSensor
 
-# personal libraries
-pass
+__all__ = ["MQbme", "HPA_TO_INHG", "DEFAULT_SENSOR_ID"]
 
-# Constants
 HPA_TO_INHG = 0.02952998751
-DEFAULT_SENSOR_ID = "SINGLE_SENSOR"
 
 
-class MQbme(Node):
+class MQbme(MQTasmotaSensor):
     """Node representing a BME280 environmental sensor."""
 
     id = "mqbme"
 
     def __init__(self, polyglot, primary, address, name, device):
-        """Initializes the MQbme node.
-
-        Args:
-            polyglot: Reference to the Polyglot interface.
-            primary: The address of the parent node.
-            address: The address of this node.
-            name: The name of this node.
-            device: Dictionary containing device-specific information.
-        """
         super().__init__(polyglot, primary, address, name)
-        self.controller = self.poly.getNode(self.primary)
-        self.lpfx = f"{address}:{name}"
-        self.cmd_topic = device["cmd_topic"]
-        self.sensor_id = device.get("sensor_id", DEFAULT_SENSOR_ID)
-        # If sensor_id was not in device, add it for consistency.
-        if "sensor_id" not in device:
-            device["sensor_id"] = self.sensor_id
+        self.init_tasmota_device(polyglot, primary, address, name, device)
 
     def updateInfo(self, payload: str, topic: str):
         """Updates sensor values based on a JSON payload from MQTT."""
         LOGGER.info(f"{self.lpfx} topic:{topic}, payload:{payload}")
-        try:
-            data = json.loads(payload)
-        except json.JSONDecodeError as e:
-            LOGGER.error(f"Could not decode JSON payload '{payload}': {e}")
+        data = self.parse_json_payload(payload)
+        if data is None:
+            LOGGER.error(f"Could not decode JSON payload '{payload}'")
             return
-
-        # Handle Tasmota StatusSNS wrapper
-        if "StatusSNS" in data:
-            data = data["StatusSNS"]
 
         if self.sensor_id in data and isinstance(data[self.sensor_id], dict):
             sensor_data = data[self.sensor_id]
@@ -85,17 +60,8 @@ class MQbme(Node):
             return None
 
     def query(self, command=None):
-        """Handles the 'QUERY' command from ISY.
-
-        Sends a status request to the device.
-        """
-        LOGGER.info(f"{self.lpfx} {command}")
-        # Tasmota: 'Status 10' gets sensor readings
-        query_topic = self.cmd_topic.rsplit("/", 1)[0] + "/Status"
-        self.controller.mqtt_pub(query_topic, "10")
-        LOGGER.debug(f"Query topic: {query_topic}")
-        self.reportDrivers()
-        LOGGER.debug(f"{self.lpfx} Exit")
+        """Handles the 'QUERY' command from ISY."""
+        self.query_tasmota_sensors(command)
 
     """
     UOMs:
@@ -119,10 +85,6 @@ class MQbme(Node):
         {"driver": "BARPRES", "value": 0, "uom": 23, "name": "Barometric Pressure"},
     ]
 
-    """
-    Commands that this node can handle.
-    Should match the 'accepts' section of the nodedef file.
-    """
     commands = {
         "QUERY": query,
     }
