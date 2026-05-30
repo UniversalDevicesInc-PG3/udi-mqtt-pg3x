@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.3
+
+- Restructure POLYGLOT_CONFIG for devfile-first setup with upload and SSH paths
+- Add starter `data/mqtt-devices.yaml` template
+- Trim README to capability and installation overview only
+
 ## 0.50.2
 
 - Extract device discovery and topic registration into discovery module

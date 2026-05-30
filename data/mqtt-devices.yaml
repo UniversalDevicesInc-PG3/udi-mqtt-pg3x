@@ -1,0 +1,28 @@
+# MQTT device configuration for udi-mqtt-pg3x
+#
+# Upload: zip this file (at the root of the zip) via Configuration → Upload file.
+# It will be extracted to the data/ folder. Set devfile to: data/mqtt-devices.yaml
+#
+# Edit topics and ids to match your devices, save, then run Discover on the MQTT controller.
+
+general:
+
+- status_prefix: "tele/Wemos32"   # replaces leading ~ on status_topic
+- cmd_prefix: "cmnd/Wemos32"       # replaces leading ~ on cmd_topic
+
+devices:
+
+- id: "WemosSW"
+  name: "Wemos Switch"
+  type: "switch"
+  status_topic: "~/POWER"
+  cmd_topic: "~/POWER"
+
+# Example sensor (uncomment and set sensor_id from Tasmota console):
+#
+# - id: "WemosTH"
+#   name: "Wemos Temp Humid"
+#   type: "TempHumid"
+#   sensor_id: "AM2301"
+#   status_topic: "~/SENSOR"
+#   cmd_topic: "~/POWER"

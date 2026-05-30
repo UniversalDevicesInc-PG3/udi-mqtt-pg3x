@@ -2,36 +2,25 @@
 
 [![license][license]][localLicense]
 
-This Poly provides an interface between MQTT broker and Polyglot v3 server.
+This Polyglot node server connects an MQTT broker to the ISY via Polyglot v3 (PG3x).
 
-## Installation instructions
+## Installation
 
-You can install the Node Server from the Polyglot store
-See POLYGLOT_CONFIG.md for devices and configurations
+Install from the Polyglot store. After install, open this node server's **Configuration** page for setup instructions.
 
-## Supported Devices
+For a few devices you can use inline JSON; for larger installs the node server supports an external YAML device file in its `data/` folder.
 
-**Tasmota-based Control Devices:**
+## Supported devices
 
-- Switches, Dimmers, Fans (iFan), Sensors
-- Energy monitoring (Sonoff S31)
-- Temperature/Humidity sensors (DHT, DS18B20, BME280)
-- Ultrasonic distance sensors (HC-SR04)
+**Tasmota control:** switches, dimmers, fans (iFan), flags, Sonoff S31 energy monitoring
 
-**Non-Tasmota Devices:**
+**Tasmota sensors:** DHT temp/humidity, DS18B20 temp, BME280, analog, HC-SR04 distance
 
-- RGBW LED strip controllers
-- Shelly Flood sensors
-- Ratgdo garage door controllers
-- **Droplet flow/volume sensors** - Water monitoring with flow rate, volume, signal quality, and health status tracking
+**Other:** RGBW strips, Shelly Flood, ratgdo garage doors, Droplet flow/volume sensors, generic raw and multi-sensor nodes
 
-## Notes
+## Help
 
-Lots of devices and updates in the last few months
-
-Please report any problems on the [UDI user forum][forum]
-
-Thanks and good luck.
+Questions and support: [UDI MQTT forum][forum]
 
 [license]: https://img.shields.io/github/license/mashape/apistatus.svg
 [localLicense]: https://github.com/Trilife/udi-mqtt-pg3x/blob/main/LICENSE
