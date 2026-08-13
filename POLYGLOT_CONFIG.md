@@ -175,6 +175,8 @@ status_topic: "stat/topic/DIMMER"
 
 #### Tasmota-flashed SENSOR devices
 
+See [README — MQTT payload formats](README.md#mqtt-payload-formats) for example JSON payloads.
+
 Add **sensor_id** — the sensor name from the Tasmota web console MQTT message:
 
 ```text

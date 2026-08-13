@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.50.4
+
+- Add MQTT payload format examples to README for all sensor types
+- Link POLYGLOT_CONFIG sensor section to README payload reference
+
 ## 0.50.3
 
 - Restructure POLYGLOT_CONFIG for devfile-first setup with upload and SSH paths
