@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.50.5
+
+- Remove pip and setuptools pins from requirements.txt that blocked eisy install
+
 ## 0.50.4
 
 - Add MQTT payload format examples to README for all sensor types
