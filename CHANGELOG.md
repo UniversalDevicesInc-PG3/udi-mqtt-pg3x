@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.50.6
+
+- Treat pip environment-resolver errors as non-fatal when plugin packages import
+
 ## 0.50.5
 
 - Remove pip and setuptools pins from requirements.txt that blocked eisy install
