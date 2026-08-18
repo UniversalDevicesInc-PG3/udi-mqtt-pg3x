@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.50.7
+
+- Bump pip dependencies in Pipfile.lock to resolve 12 Dependabot security alerts
+- urllib3 2.5.0 → 2.7.0, requests 2.32.5 → 2.33.0, pytest 7.4.4 → 9.0.3, and related transitive updates
+
 ## 0.50.6
 
 - Treat pip environment-resolver errors as non-fatal when plugin packages import
