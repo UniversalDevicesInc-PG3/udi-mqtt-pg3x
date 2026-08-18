@@ -20,7 +20,7 @@ from nodes import Controller
 
 LOGGER = udi_interface.LOGGER
 
-VERSION = "0.50.6"
+VERSION = "0.50.7"
 
 # Version history: see CHANGELOG.md
 
