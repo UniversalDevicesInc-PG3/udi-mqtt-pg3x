@@ -36,21 +36,22 @@ def add_status_topics(controller, dev, status_topics: List[str]) -> None:
     """Add status topics and map them to a device address."""
     device_address = format_device_address(controller, dev)
 
-    for raw_topic in status_topics:
-        status_topic = normalize_topic(raw_topic, controller.status_prefix)
-        if status_topic in controller.status_topics_to_devices:
-            existing = controller.status_topics_to_devices[status_topic]
-            if existing != device_address:
-                LOGGER.warning(
-                    "Topic %s already mapped to %s; keeping existing mapping",
-                    status_topic,
-                    existing,
-                )
-            continue
+    with controller._status_topics_lock:
+        for raw_topic in status_topics:
+            status_topic = normalize_topic(raw_topic, controller.status_prefix)
+            if status_topic in controller.status_topics_to_devices:
+                existing = controller.status_topics_to_devices[status_topic]
+                if existing != device_address:
+                    LOGGER.warning(
+                        "Topic %s already mapped to %s; keeping existing mapping",
+                        status_topic,
+                        existing,
+                    )
+                continue
 
-        if status_topic not in controller.status_topics:
-            controller.status_topics.append(status_topic)
-        controller.status_topics_to_devices[status_topic] = device_address
+            if status_topic not in controller.status_topics:
+                controller.status_topics.append(status_topic)
+            controller.status_topics_to_devices[status_topic] = device_address
 
 
 def add_device_status_topics(controller, dev) -> None:
@@ -116,21 +117,22 @@ def discover_nodes(controller, nodes_existing, nodes_new) -> None:
 
 def remove_status_topics(controller, node) -> None:
     """Remove status topics associated with a deleted node."""
-    topics_to_remove = [
-        status_topic
-        for status_topic, device_address in controller.status_topics_to_devices.items()
-        if device_address == node
-    ]
+    with controller._status_topics_lock:
+        topics_to_remove = [
+            status_topic
+            for status_topic, device_address in controller.status_topics_to_devices.items()
+            if device_address == node
+        ]
 
-    if topics_to_remove and controller.mqtt_bridge:
-        controller.mqtt_bridge.unsubscribe(topics_to_remove)
+        if topics_to_remove and controller.mqtt_bridge:
+            controller.mqtt_bridge.unsubscribe(topics_to_remove)
 
-    for status_topic in topics_to_remove:
-        if status_topic in controller.status_topics:
-            controller.status_topics.remove(status_topic)
-        if status_topic in controller.status_topics_to_devices:
-            controller.status_topics_to_devices.pop(status_topic)
-            LOGGER.info(f"Removed subscription for topic: {status_topic}")
+        for status_topic in topics_to_remove:
+            if status_topic in controller.status_topics:
+                controller.status_topics.remove(status_topic)
+            if status_topic in controller.status_topics_to_devices:
+                controller.status_topics_to_devices.pop(status_topic)
+                LOGGER.info(f"Removed subscription for topic: {status_topic}")
 
 
 def cleanup_nodes(controller, nodes_new, nodes_old) -> bool:

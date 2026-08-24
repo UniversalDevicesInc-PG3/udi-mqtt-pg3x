@@ -14,7 +14,8 @@ Copyright: (C) 2025 Stephen Jenkins
 # std libraries
 import json
 import logging
-from threading import Event, Condition
+from threading import Event, Condition, Lock
+from collections import deque
 from typing import Dict, List, Optional, Any
 
 # external libraries
@@ -113,6 +114,11 @@ class Controller(Node):
         self.status_topics_to_devices: Dict[str, str] = {}
         self.valid_configuration = False
         self.mqtt_bridge: Optional[MqttBridge] = None
+        self._status_topics_lock = Lock()
+        self._mqtt_callback_queue: deque = deque()
+        self._mqtt_callback_lock = Lock()
+        self._mqtt_stopping = False
+        self._mqtt_connected_once = False
 
         # Create data storage classes
         self.Notices = Custom(poly, "notices")
@@ -201,6 +207,7 @@ class Controller(Node):
 
         # Discover and wait for discovery to complete
         mqttSuccess = self._mqtt_start()
+        self._drain_mqtt_callbacks()
 
         # first update from Gateway
         if not mqttSuccess:
@@ -452,6 +459,8 @@ class Controller(Node):
         Returns:
             None
         """
+        self._drain_mqtt_callbacks()
+
         # no updates until node is through start-up
         if not self.ready_event.is_set():
             LOGGER.debug("Node not ready yet, exiting poll")
@@ -505,12 +514,21 @@ class Controller(Node):
 
         self.discovery_in = True
         LOGGER.info("In Discovery...")
+        topics_before = set(self.status_topics)
 
         if self.checkParams() and self._discover():
             success = True
             LOGGER.info("Discovery Success")
-            if self.mqtt_bridge and self.mqtt_bridge.client and self.mqtt_bridge.client.is_connected():
-                self.mqtt_subscribe()
+            added_topics = [
+                topic for topic in self.status_topics if topic not in topics_before
+            ]
+            if (
+                added_topics
+                and self.mqtt_bridge
+                and self.mqtt_bridge.client
+                and self.mqtt_bridge.client.is_connected()
+            ):
+                self.mqtt_bridge.subscribe(topics=added_topics, query_nodes=False)
         else:
             LOGGER.error("Discovery Failure")
         self.discovery_in = False
@@ -552,6 +570,23 @@ class Controller(Node):
         """Remove status topics for a deleted node."""
         return discovery.remove_status_topics(self, node)
 
+    def _enqueue_mqtt_callback(self, func, *args, **kwargs) -> None:
+        """Queue MQTT callback work for the Polyglot/main thread."""
+        with self._mqtt_callback_lock:
+            self._mqtt_callback_queue.append((func, args, kwargs))
+
+    def _drain_mqtt_callbacks(self) -> None:
+        """Run queued MQTT callback work on the Polyglot/main thread."""
+        while True:
+            with self._mqtt_callback_lock:
+                if not self._mqtt_callback_queue:
+                    break
+                func, args, kwargs = self._mqtt_callback_queue.popleft()
+            try:
+                func(*args, **kwargs)
+            except Exception:
+                LOGGER.exception("Error running deferred MQTT callback")
+
     def _on_connect(self, _mqttc, _userdata, _flags, rc):
         """Handle MQTT connection events.
 
@@ -568,18 +603,50 @@ class Controller(Node):
         Returns:
             None
         """
+        if self._mqtt_stopping:
+            return
+        self._enqueue_mqtt_callback(self._handle_mqtt_connect, rc)
+
+    def _handle_mqtt_connect(self, rc: int) -> None:
+        """Apply connect results on the Polyglot/main thread."""
+        if self._mqtt_stopping:
+            return
         if rc == 0:
-            LOGGER.info("Poly MQTT Connected")
-            self.mqtt_subscribe()
+            LOGGER.info("Poly MQTT connected/reconnected")
+            if self.Notices.get("mqtt"):
+                self.Notices.delete("mqtt")
+            is_reconnect = self._mqtt_connected_once
+            self._mqtt_connected_once = True
+            if self.mqtt_bridge:
+                self.mqtt_bridge.subscribe(query_nodes=not is_reconnect)
         else:
             LOGGER.error(f"Poly MQTT Connect failed with rc:{rc}")
+            self.Notices["mqtt"] = (
+                f"User MQTT connection failed (rc {rc}); "
+                "retrying automatically"
+            )
+
+    def _on_connect_fail(self, _mqttc, _userdata):
+        """Handle MQTT TCP connection failures before CONNACK."""
+        if self._mqtt_stopping:
+            return
+        self._enqueue_mqtt_callback(self._handle_mqtt_connect_fail)
+
+    def _handle_mqtt_connect_fail(self) -> None:
+        """Log TCP connect failures on the Polyglot/main thread."""
+        if self._mqtt_stopping:
+            return
+        LOGGER.warning("Poly MQTT TCP connection failed; retrying automatically")
+        self.Notices["mqtt"] = (
+            "Waiting on user MQTT connection; retrying automatically"
+        )
 
     def _on_disconnect(self, _mqttc, _userdata, rc):
         """Handle MQTT disconnection events.
 
         This method is called when the MQTT client disconnects from the broker.
-        It handles both graceful disconnections and unexpected disconnections,
-        attempting to reconnect if the disconnection was unexpected.
+        It handles both graceful disconnections and unexpected disconnections.
+        Paho's automatic reconnect handles unexpected disconnections.
 
         Args:
             _mqttc: MQTT client instance (unused).
@@ -589,12 +656,23 @@ class Controller(Node):
         Returns:
             None
         """
+        if self._mqtt_stopping:
+            return
+        self._enqueue_mqtt_callback(self._handle_mqtt_disconnect, rc)
+
+    def _handle_mqtt_disconnect(self, rc: int) -> None:
+        """Apply disconnect notices on the Polyglot/main thread."""
+        if self._mqtt_stopping:
+            return
         if rc != 0:
-            LOGGER.warning("Poly MQTT disconnected, trying to re-connect")
-            try:
-                self.mqttc.reconnect()
-            except Exception as ex:
-                LOGGER.error(f"Error connecting to Poly MQTT broker {ex}")
+            LOGGER.warning(
+                "Poly MQTT disconnected (rc %s); "
+                "Paho will retry automatically",
+                rc,
+            )
+            self.Notices["mqtt"] = (
+                "User MQTT disconnected; retrying automatically"
+            )
         else:
             LOGGER.info("Poly MQTT graceful disconnection")
 
@@ -796,13 +874,19 @@ class Controller(Node):
 
     def mqtt_pub(self, topic, message):
         """Publish a message to an MQTT topic."""
-        if self.mqtt_bridge:
-            self.mqtt_bridge.publish(topic, message)
+        if not self.mqtt_bridge:
+            LOGGER.warning("MQTT publish rejected: bridge not initialized")
+            return False
+        if not self.mqtt_bridge.publish(topic, message):
+            LOGGER.warning("MQTT publish failed: topic=%s", topic)
+            return False
+        return True
 
-    def mqtt_subscribe(self):
+    def mqtt_subscribe(self, query_nodes=True):
         """Subscribe to MQTT status topics."""
         if self.mqtt_bridge:
-            self.mqtt_bridge.subscribe()
+            return self.mqtt_bridge.subscribe(query_nodes=query_nodes)
+        return False
 
     def delete(self, command=None):
         """Handle NodeServer deletion.
@@ -835,6 +919,9 @@ class Controller(Node):
             None
         """
         LOGGER.info(command)
+        self._mqtt_stopping = True
+        with self._mqtt_callback_lock:
+            self._mqtt_callback_queue.clear()
         self.setDriver("ST", 0, report=True, force=True)
         self.Notices.clear()
         if self.mqtt_bridge:
@@ -842,6 +929,7 @@ class Controller(Node):
         elif self.mqttc:
             self.mqttc.loop_stop()
             self.mqttc.disconnect()
+            self.mqttc = None
         LOGGER.info("NodeServer stopped.")
 
     def heartbeat(self):
