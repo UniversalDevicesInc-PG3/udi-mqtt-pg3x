@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.50.8
+
+- Enable Paho MQTT automatic reconnect with exponential backoff (2–30s)
+- Start with `connect_async()` and keep retrying when the broker is offline at startup
+- Show a persistent notice while waiting for or recovering the user MQTT connection
+- Reject publishes while disconnected instead of silently dropping commands
+- Resubscribe to status topics only after a successful connect callback
+- Defer MQTT connect/disconnect handling to the Polyglot thread to avoid races
+- Subscribe only newly discovered topics during DISCOVER; skip node queries on reconnect
+- Add `on_connect_fail` logging for TCP connection failures before CONNACK
+
 ## 0.50.7
 
 - Bump pip dependencies in Pipfile.lock to resolve 12 Dependabot security alerts

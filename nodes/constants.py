@@ -9,8 +9,6 @@ DEFAULT_CONFIG = {
     "cmd_prefix": None,
 }
 
-MQTT_CONNECT_WAIT_SEC = 60
-
 STATUS_TOPIC_PREFIX = "stat/"
 TELE_TOPIC_PREFIX = "tele/"
 RESULT_TOPIC_SUFFIX = "/RESULT"

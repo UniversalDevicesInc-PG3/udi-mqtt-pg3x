@@ -13,7 +13,7 @@ Tests cover:
 """
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 import json
 import yaml
 from nodes.constants import (
@@ -750,11 +750,18 @@ class TestControllerMqttPub:
 
     def test_mqtt_pub_publishes_message(self, controller):
         """Test that mqtt_pub publishes message."""
-        controller.mqtt_pub("test/topic", "test_message")
+        controller.mqtt_bridge.publish.return_value = True
+
+        assert controller.mqtt_pub("test/topic", "test_message") is True
 
         controller.mqtt_bridge.publish.assert_called_once_with(
             "test/topic", "test_message"
         )
+
+    def test_mqtt_pub_returns_false_when_publish_fails(self, controller):
+        controller.mqtt_bridge.publish.return_value = False
+
+        assert controller.mqtt_pub("test/topic", "test_message") is False
 
 
 class TestControllerStop:
@@ -782,17 +789,16 @@ class TestControllerStop:
             setattr(poly, attr, attr)
 
         c = Controller(poly, "controller", "controller", "MQTT")
-        c.mqttc = Mock()
-        c.mqttc.disconnect = Mock()
-        c.mqttc.loop_stop = Mock()
+        c.mqtt_bridge = Mock()
+        c.mqtt_bridge.stop = Mock()
         return c
 
     def test_stop_disconnects_mqtt(self, controller):
         """Test that stop disconnects MQTT client."""
         controller.stop()
 
-        controller.mqttc.disconnect.assert_called_once()
-        controller.mqttc.loop_stop.assert_called_once()
+        controller.mqtt_bridge.stop.assert_called_once()
+        assert controller._mqtt_stopping is True
 
 
 class TestControllerFormatDeviceAddress:
@@ -1041,6 +1047,98 @@ class TestControllerMqttSubscribe:
         controller.mqtt_subscribe()
 
         controller.mqtt_bridge.subscribe.assert_called_once()
+
+
+class TestControllerMqttCallbacks:
+    """Tests for MQTT connect/disconnect callbacks."""
+
+    @pytest.fixture
+    def controller(self):
+        poly = Mock()
+        poly.subscribe = Mock()
+        poly.ready = Mock()
+        poly.db_getNodeDrivers = Mock(return_value=[])
+        for attr in [
+            "START",
+            "POLL",
+            "LOGLEVEL",
+            "CUSTOMPARAMS",
+            "CUSTOMDATA",
+            "STOP",
+            "DISCOVER",
+            "CUSTOMTYPEDPARAMS",
+            "CUSTOMTYPEDDATA",
+            "ADDNODEDONE",
+        ]:
+            setattr(poly, attr, attr)
+
+        c = Controller(poly, "controller", "controller", "MQTT")
+        c.mqtt_bridge = Mock()
+        c.mqtt_bridge.subscribe = Mock(return_value=True)
+        c.Notices = MagicMock()
+        c.Notices.get = Mock(return_value="waiting")
+        c.mqttc = Mock()
+        return c
+
+    def test_on_connect_success_clears_notice_and_subscribes(self, controller):
+        controller._on_connect(None, None, None, 0)
+        controller._drain_mqtt_callbacks()
+
+        controller.Notices.delete.assert_called_once_with("mqtt")
+        controller.mqtt_bridge.subscribe.assert_called_once_with(query_nodes=True)
+
+    def test_on_connect_reconnect_skips_node_queries(self, controller):
+        controller._mqtt_connected_once = True
+        controller._on_connect(None, None, None, 0)
+        controller._drain_mqtt_callbacks()
+
+        controller.mqtt_bridge.subscribe.assert_called_once_with(query_nodes=False)
+
+    def test_on_connect_failure_sets_retry_notice(self, controller):
+        controller._on_connect(None, None, None, 5)
+        controller._drain_mqtt_callbacks()
+
+        controller.Notices.__setitem__.assert_called_with(
+            "mqtt",
+            "User MQTT connection failed (rc 5); retrying automatically",
+        )
+        controller.mqtt_bridge.subscribe.assert_not_called()
+
+    def test_on_connect_fail_sets_waiting_notice(self, controller):
+        controller._on_connect_fail(None, None)
+        controller._drain_mqtt_callbacks()
+
+        controller.Notices.__setitem__.assert_called_with(
+            "mqtt",
+            "Waiting on user MQTT connection; retrying automatically",
+        )
+
+    def test_on_disconnect_unexpected_sets_retry_notice(self, controller):
+        controller._on_disconnect(None, None, 1)
+        controller._drain_mqtt_callbacks()
+
+        controller.Notices.__setitem__.assert_called_with(
+            "mqtt",
+            "User MQTT disconnected; retrying automatically",
+        )
+        controller.mqttc.reconnect.assert_not_called()
+
+    def test_on_disconnect_graceful_does_not_set_notice(self, controller):
+        controller._on_disconnect(None, None, 0)
+        controller._drain_mqtt_callbacks()
+
+        controller.Notices.__setitem__.assert_not_called()
+        controller.mqttc.reconnect.assert_not_called()
+
+    def test_mqtt_callbacks_ignored_after_stop(self, controller):
+        controller._mqtt_stopping = True
+        controller._on_connect(None, None, None, 0)
+        controller._on_disconnect(None, None, 1)
+        controller._on_connect_fail(None, None)
+        controller._drain_mqtt_callbacks()
+
+        controller.mqtt_bridge.subscribe.assert_not_called()
+        controller.Notices.__setitem__.assert_not_called()
 
 
 class TestControllerDelete:

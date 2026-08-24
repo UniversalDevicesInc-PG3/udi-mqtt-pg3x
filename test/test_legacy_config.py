@@ -228,13 +228,18 @@ class TestLegacyStartupAndRouting:
 
         node.updateInfo.assert_called_once_with(payload, topic)
 
-    def test_discover_resubscribes_when_mqtt_connected(self, controller):
+    def test_discover_resubscribes_only_added_topics_when_mqtt_connected(self, controller):
         controller.checkParams = Mock(return_value=True)
-        controller._discover = Mock(return_value=True)
-        controller.mqtt_subscribe = Mock()
+        controller._discover = Mock(
+            side_effect=lambda: controller.status_topics.append("stat/new/POWER") or True
+        )
         controller.mqtt_bridge = Mock()
         controller.mqtt_bridge.client = Mock()
         controller.mqtt_bridge.client.is_connected.return_value = True
+        controller.mqtt_bridge.subscribe = Mock(return_value=True)
 
         assert controller.discover_cmd("DISCOVER") is True
-        controller.mqtt_subscribe.assert_called_once()
+        controller.mqtt_bridge.subscribe.assert_called_once_with(
+            topics=["stat/new/POWER"],
+            query_nodes=False,
+        )
