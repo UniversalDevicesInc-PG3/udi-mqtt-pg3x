@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ENTRY = ROOT / "mqtt-poly.py"
+ENTRY = ROOT / "udi-mqtt-pg3x.py"
 VERSION_FILE = ROOT / "profile" / "version.txt"
 
 
