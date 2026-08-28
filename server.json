@@ -1,0 +1,29 @@
+{
+    "name": "MQTT",
+    "docs": "https://github.com/UniversalDevicesInc-PG3/udi-mqtt-pg3x",
+    "type": "python3",
+    "executable": "mqtt-poly.py",
+    "install": "install.sh",
+    "description": "Interface between an MQTT broker and Polyglot for EISY/Polisy.",
+    "shortPoll": "60",
+    "longPoll": "300",
+    "logLevel": "INFO",
+    "customParams": {
+        "devlist": "",
+        "devfile": "",
+        "mqtt_server": "localhost",
+        "mqtt_port": "1884",
+        "mqtt_user": "admin",
+        "mqtt_password": "admin"
+    },
+    "credits": [
+        {
+            "title": "MQTT NodeServer",
+            "author": "Stephen Jenkins",
+            "version": "0.50.8",
+            "date": "August 2026",
+            "source": "https://github.com/UniversalDevicesInc-PG3/udi-mqtt-pg3x",
+            "license": "https://github.com/UniversalDevicesInc-PG3/udi-mqtt-pg3x/blob/main/LICENSE"
+        }
+    ]
+}
