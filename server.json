@@ -2,7 +2,7 @@
     "name": "MQTT",
     "docs": "https://github.com/UniversalDevicesInc-PG3/udi-mqtt-pg3x",
     "type": "python3",
-    "executable": "mqtt-poly.py",
+    "executable": "udi-mqtt-pg3x.py",
     "install": "install.sh",
     "description": "Interface between an MQTT broker and Polyglot for EISY/Polisy.",
     "shortPoll": "60",
