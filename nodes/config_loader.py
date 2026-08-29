@@ -1,12 +1,15 @@
 """Load and validate MQTT device configuration from Polyglot parameters."""
 
 import json
+from pathlib import Path
 from typing import Any, List, Optional
 
 import yaml
 from udi_interface import LOGGER
 
 from .constants import DEFAULT_CONFIG
+
+DEFAULT_DEVFILE = "data/mqtt-devices.yaml"
 
 
 def get_str(*args: Optional[Any]) -> Optional[str]:
@@ -37,12 +40,31 @@ def upsert_by_id(config_list: List[dict], new_entry: dict) -> None:
     config_list.append(new_entry)
 
 
+def resolve_devfile_path(filename: str) -> Path:
+    """Resolve devfile parameter to a path under the node server install folder."""
+    path = Path(filename.strip())
+    if path.is_absolute():
+        return path
+    if len(path.parts) == 1:
+        return Path("data") / path.name
+    return path
+
+
+def wants_devfile(controller) -> bool:
+    """Return True when a devfile should be loaded (explicit path or default)."""
+    raw = controller.Parameters.get("devfile")
+    if isinstance(raw, str) and raw.strip():
+        return True
+    return not bool(controller.Parameters.get("devlist"))
+
+
 def load_devfile_config(controller) -> bool:
     """Load devices and general settings from a YAML devfile."""
-    devfile_path = controller.Parameters["devfile"]
-    if not devfile_path or not isinstance(devfile_path, str):
-        LOGGER.error("Invalid devfile path provided")
-        return False
+    raw = controller.Parameters.get("devfile", "")
+    if not isinstance(raw, str) or not raw.strip():
+        devfile_path = resolve_devfile_path(DEFAULT_DEVFILE)
+    else:
+        devfile_path = resolve_devfile_path(raw)
 
     try:
         with open(devfile_path, "r", encoding="utf-8") as file:
@@ -140,16 +162,15 @@ def load_mqtt_parameters(controller) -> bool:
 
 def check_params(controller) -> bool:
     """Load devfile and/or devlist configuration and MQTT broker settings."""
-    has_devfile = bool(controller.Parameters.get("devfile"))
     has_devlist = bool(controller.Parameters.get("devlist"))
 
-    if not has_devfile and not has_devlist:
+    if not wants_devfile(controller) and not has_devlist:
         LOGGER.error(
             "checkParams: No devfile or devlist configured! Must be configured."
         )
         return False
 
-    if has_devfile and not load_devfile_config(controller):
+    if wants_devfile(controller) and not load_devfile_config(controller):
         return False
 
     if has_devlist and not load_devlist_config(controller):

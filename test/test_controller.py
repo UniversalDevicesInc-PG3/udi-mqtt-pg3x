@@ -1372,13 +1372,13 @@ class TestControllerCheckParams:
         controller._load_mqtt_parameters.assert_called_once()
 
     def test_check_params_no_config(self, controller):
-        """Test checkParams without devfile or devlist."""
+        """Test checkParams without devfile or devlist tries default devfile."""
         controller.Parameters.get = Mock(return_value=None)
 
         result = controller.checkParams()
 
-        assert result is False
-        controller._load_devfile_config.assert_not_called()
+        assert result is True
+        controller._load_devfile_config.assert_called_once()
         controller._load_devlist_config.assert_not_called()
 
     def test_check_params_devfile_load_fails(self, controller):
@@ -1650,7 +1650,7 @@ class TestControllerConfigErrors:
                 result = controller._load_devfile_config()
                 assert result is False
                 mock_logger.error.assert_called_with(
-                    "Failed to open nonexistent.yaml: File not found"
+                    "Failed to open data/nonexistent.yaml: File not found"
                 )
 
     def test_load_devfile_invalid_yaml(self, controller):
@@ -1661,7 +1661,7 @@ class TestControllerConfigErrors:
                     result = controller._load_devfile_config()
                     assert result is False
                     mock_logger.error.assert_called_with(
-                        "Failed to parse nonexistent.yaml: YAML error"
+                        "Failed to parse data/nonexistent.yaml: YAML error"
                     )
 
     def test_load_devfile_missing_devices_section(self, controller):
@@ -1672,7 +1672,7 @@ class TestControllerConfigErrors:
                     result = controller._load_devfile_config()
                     assert result is False
                     mock_logger.error.assert_called_with(
-                        "Manual discovery file nonexistent.yaml is missing devices section"
+                        "Manual discovery file data/nonexistent.yaml is missing devices section"
                     )
 
     def test_load_devlist_invalid_json(self, controller):
