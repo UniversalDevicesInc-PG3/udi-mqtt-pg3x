@@ -1372,13 +1372,13 @@ class TestControllerCheckParams:
         controller._load_mqtt_parameters.assert_called_once()
 
     def test_check_params_no_config(self, controller):
-        """Test checkParams without devfile or devlist tries default devfile."""
+        """Test checkParams without devfile or devlist."""
         controller.Parameters.get = Mock(return_value=None)
 
         result = controller.checkParams()
 
-        assert result is True
-        controller._load_devfile_config.assert_called_once()
+        assert result is False
+        controller._load_devfile_config.assert_not_called()
         controller._load_devlist_config.assert_not_called()
 
     def test_check_params_devfile_load_fails(self, controller):

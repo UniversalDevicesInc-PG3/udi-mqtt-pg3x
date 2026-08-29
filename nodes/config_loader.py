@@ -9,8 +9,6 @@ from udi_interface import LOGGER
 
 from .constants import DEFAULT_CONFIG
 
-DEFAULT_DEVFILE = "data/mqtt-devices.yaml"
-
 
 def get_str(*args: Optional[Any]) -> Optional[str]:
     """Return the first string argument, or None."""
@@ -51,20 +49,19 @@ def resolve_devfile_path(filename: str) -> Path:
 
 
 def wants_devfile(controller) -> bool:
-    """Return True when a devfile should be loaded (explicit path or default)."""
+    """Return True when devfile is explicitly set to a non-empty path."""
     raw = controller.Parameters.get("devfile")
-    if isinstance(raw, str) and raw.strip():
-        return True
-    return not bool(controller.Parameters.get("devlist"))
+    return isinstance(raw, str) and bool(raw.strip())
 
 
 def load_devfile_config(controller) -> bool:
     """Load devices and general settings from a YAML devfile."""
     raw = controller.Parameters.get("devfile", "")
     if not isinstance(raw, str) or not raw.strip():
-        devfile_path = resolve_devfile_path(DEFAULT_DEVFILE)
-    else:
-        devfile_path = resolve_devfile_path(raw)
+        LOGGER.error("Invalid devfile path provided")
+        return False
+
+    devfile_path = resolve_devfile_path(raw)
 
     try:
         with open(devfile_path, "r", encoding="utf-8") as file:

@@ -25,16 +25,21 @@ class TestResolveDevfilePath:
 
 
 class TestLoadDevfileConfig:
-    def test_empty_devfile_uses_default(self, tmp_path, monkeypatch):
-        default_file = tmp_path / "data" / "mqtt-devices.yaml"
-        default_file.parent.mkdir()
-        default_file.write_text(
+    def test_empty_devfile_rejected(self):
+        controller = Mock()
+        controller.Parameters = {"devfile": ""}
+        assert config_loader.load_devfile_config(controller) is False
+
+    def test_explicit_default_filename(self, tmp_path, monkeypatch):
+        data_file = tmp_path / "data" / "mqtt-devices.yaml"
+        data_file.parent.mkdir()
+        data_file.write_text(
             yaml.dump({"devices": [{"id": "d1", "type": "switch"}]})
         )
         monkeypatch.chdir(tmp_path)
 
         controller = Mock()
-        controller.Parameters = {"devfile": ""}
+        controller.Parameters = {"devfile": "mqtt-devices.yaml"}
 
         assert config_loader.load_devfile_config(controller) is True
         assert controller.devlist == [{"id": "d1", "type": "switch"}]
