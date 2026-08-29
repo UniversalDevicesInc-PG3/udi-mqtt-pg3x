@@ -170,7 +170,7 @@ class Controller(Node):
             If any step fails, the controller will set error status and display
             appropriate error messages in the notices.
         """
-        LOGGER.info(f"Virtual Devices PG3 NodeServer {self.poly.serverdata['version']}")
+        LOGGER.info("MQTT NodeServer %s", self.poly.serverdata["version"])
         self.Notices.clear()
         self.Notices["hello"] = "Start-up"
         self.setDriver("ST", 1, report=True, force=True)
