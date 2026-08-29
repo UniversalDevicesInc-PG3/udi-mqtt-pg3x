@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.50.9
+
+- **Clear MQTT waiting notice promptly after broker connects**: drain Paho callbacks at startup and at DISCOVER so "Waiting on user MQTT connection" does not linger for a full poll cycle when the broker is already up
+- **Fix devfile path resolution**: bare filename (e.g. `virtualconfig.yaml`) resolves to `data/<name>`; empty `devfile` no longer silently loads `mqtt-devices.yaml` — use an explicit devfile or `devlist`
+- **Fix startup log** (was incorrectly labeled "Virtual Devices")
+- **PG3 store manifest** (`server.json`) with executable `udi-mqtt-pg3x.py` — use **Update** from the store
+- **Rename entry script** from `mqtt-poly.py` to `udi-mqtt-pg3x.py`
+- **Standard bootstrap** (error handling; version in `VERSION` / `profile/version.txt` / `server.json`)
+- **Developer toolchain**: uv, pytest profile sync test, Makefile, CONTRIBUTING (runtime install unchanged: `install.sh` + `requirements.txt`)
+
 ## 0.50.8
 
 - Enable Paho MQTT automatic reconnect with exponential backoff (2–30s)
