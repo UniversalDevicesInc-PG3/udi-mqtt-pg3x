@@ -383,16 +383,15 @@ class Controller(Node):
 
     def checkParams(self):
         """Load and validate configuration parameters."""
-        has_devfile = bool(self.Parameters.get("devfile"))
         has_devlist = bool(self.Parameters.get("devlist"))
 
-        if not has_devfile and not has_devlist:
+        if not config_loader.wants_devfile(self) and not has_devlist:
             LOGGER.error(
                 "checkParams: No devfile or devlist configured! Must be configured."
             )
             return False
 
-        if has_devfile and not self._load_devfile_config():
+        if config_loader.wants_devfile(self) and not self._load_devfile_config():
             return False
 
         if has_devlist and not self._load_devlist_config():
