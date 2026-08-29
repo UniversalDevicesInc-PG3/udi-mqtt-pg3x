@@ -1087,6 +1087,13 @@ class TestControllerMqttCallbacks:
         controller.Notices.delete.assert_called_once_with("mqtt")
         controller.mqtt_bridge.subscribe.assert_called_once_with(query_nodes=True)
 
+    def test_drain_mqtt_callbacks_for_clears_connect_notice(self, controller):
+        controller._on_connect(None, None, None, 0)
+        controller._drain_mqtt_callbacks_for(timeout=1.0)
+
+        controller.Notices.delete.assert_called_once_with("mqtt")
+        controller.mqtt_bridge.subscribe.assert_called_once_with(query_nodes=True)
+
     def test_on_connect_reconnect_skips_node_queries(self, controller):
         controller._mqtt_connected_once = True
         controller._on_connect(None, None, None, 0)

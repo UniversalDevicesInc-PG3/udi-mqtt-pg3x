@@ -14,6 +14,7 @@ Copyright: (C) 2025 Stephen Jenkins
 # std libraries
 import json
 import logging
+import time
 from threading import Event, Condition, Lock
 from collections import deque
 from typing import Dict, List, Optional, Any
@@ -207,7 +208,7 @@ class Controller(Node):
 
         # Discover and wait for discovery to complete
         mqttSuccess = self._mqtt_start()
-        self._drain_mqtt_callbacks()
+        self._drain_mqtt_callbacks_for(timeout=10.0)
 
         # first update from Gateway
         if not mqttSuccess:
@@ -511,6 +512,8 @@ class Controller(Node):
             LOGGER.info("Discover already running.")
             return success
 
+        self._drain_mqtt_callbacks()
+
         self.discovery_in = True
         LOGGER.info("In Discovery...")
         topics_before = set(self.status_topics)
@@ -585,6 +588,18 @@ class Controller(Node):
                 func(*args, **kwargs)
             except Exception:
                 LOGGER.exception("Error running deferred MQTT callback")
+
+    def _drain_mqtt_callbacks_for(
+        self, timeout: float = 10.0, interval: float = 0.05
+    ) -> None:
+        """Drain MQTT callbacks until connected or timeout (startup / broker wait)."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            self._drain_mqtt_callbacks()
+            if self._mqtt_connected_once:
+                return
+            time.sleep(interval)
+        self._drain_mqtt_callbacks()
 
     def _on_connect(self, _mqttc, _userdata, _flags, rc):
         """Handle MQTT connection events.
