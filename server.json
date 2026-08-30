@@ -20,7 +20,7 @@
         {
             "title": "MQTT NodeServer",
             "author": "Stephen Jenkins",
-            "version": "0.50.9",
+            "version": "0.50.10",
             "date": "August 2026",
             "source": "https://github.com/UniversalDevicesInc-PG3/udi-mqtt-pg3x",
             "license": "https://github.com/UniversalDevicesInc-PG3/udi-mqtt-pg3x/blob/main/LICENSE"

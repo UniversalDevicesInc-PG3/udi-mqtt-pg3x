@@ -800,6 +800,14 @@ class TestControllerStop:
         controller.mqtt_bridge.stop.assert_called_once()
         assert controller._mqtt_stopping is True
 
+    def test_stop_before_mqtt_start(self, controller):
+        """Stop must not crash when startup failed before MQTT bridge was created."""
+        controller.mqtt_bridge = None
+
+        controller.stop("STOP")
+
+        assert controller._mqtt_stopping is True
+
 
 class TestControllerFormatDeviceAddress:
     """Tests for _format_device_address method."""
