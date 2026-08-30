@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# eisy's system Python can report pipenv/setuptools conflicts that make
-# pip exit 1 even after this plugin's packages install successfully.
-# PG3 treats a non-zero install.sh as a failed plugin install (HTTP 500).
-pip3 install -r requirements.txt --user
+# EISY/FreeBSD: pip may exit non-zero (resolver noise, pip version check)
+# even when packages installed. PG3 treats non-zero install.sh as HTTP 500.
+pip3 install -r requirements.txt --user --disable-pip-version-check
 python3 -c "import udi_interface, yaml, paho.mqtt"
