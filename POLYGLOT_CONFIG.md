@@ -14,11 +14,9 @@ If you are on Polisy or running Polyglot on an RPi, see post #1 in [this thread]
 
 ## Choose your setup
 
-| Situation | Use |
-|-----------|-----|
-| One or two simple switches | **devlist** — [Quick start](#quick-start-one-or-two-switches-devlist) |
-| Several devices, Tasmota sensors, or topic prefixes | **devfile** — [Recommended](#recommended-yaml-devfile) |
-| Already using a devfile | Edit YAML, save, run **Discover** |
+- **One or two simple switches** — **devlist** — [Quick start](#quick-start-one-or-two-switches-devlist)
+- **Several devices, Tasmota sensors, or topic prefixes** — **devfile** — [Recommended](#recommended-yaml-devfile)
+- **Already using a devfile** — edit YAML, save, run **Discover**
 
 You must configure **devlist** and/or **devfile**. At least one is required.
 
