@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.50.10
+
+- **Fix stop() crash on early shutdown**: remove legacy `mqttc` teardown path that raised `AttributeError` when discovery failed before the MQTT bridge was created (common during eisy-ui config)
+
 ## 0.50.9
 
 - **Clear MQTT waiting notice promptly after broker connects**: drain Paho callbacks at startup and at DISCOVER so "Waiting on user MQTT connection" does not linger for a full poll cycle when the broker is already up
