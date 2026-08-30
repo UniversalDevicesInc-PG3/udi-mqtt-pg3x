@@ -940,10 +940,6 @@ class Controller(Node):
         self.Notices.clear()
         if self.mqtt_bridge:
             self.mqtt_bridge.stop()
-        elif self.mqttc:
-            self.mqttc.loop_stop()
-            self.mqttc.disconnect()
-            self.mqttc = None
         LOGGER.info("NodeServer stopped.")
 
     def heartbeat(self):
