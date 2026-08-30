@@ -9,8 +9,8 @@
     "longPoll": "300",
     "logLevel": "INFO",
     "customParams": {
-        "devlist": "",
-        "devfile": "",
+        "devlist": "[ {\"id\": \"sonoff1\", \"type\": \"switch\", \"status_topic\": \"stat/sonoff1/POWER\", \"cmd_topic\": \"cmnd/sonoff1/power\"} ]",
+        "devfile": "data/mqtt-devices.yaml",
         "mqtt_server": "localhost",
         "mqtt_port": "1884",
         "mqtt_user": "admin",
