@@ -316,7 +316,27 @@ class Controller(Node):
             None
         """
         LOGGER.info("parmHandler: Loading parameters now")
-        self.Parameters.load(params)
+        if params:
+            self.Parameters.load(params)
+
+        defaults = {
+            "devlist": (
+                '[ {"id": "sonoff1", "type": "switch", '
+                '"status_topic": "stat/sonoff1/POWER", '
+                '"cmd_topic": "cmnd/sonoff1/power"} ]'
+            ),
+            "devfile": "data/mqtt-devices.yaml",
+            "mqtt_server": "localhost",
+            "mqtt_port": "1884",
+            "mqtt_user": "admin",
+            "mqtt_password": "admin",
+        }
+        for param, default_value in defaults.items():
+            if param not in self.Parameters:
+                self.Parameters[param] = default_value
+            elif default_value and not str(self.Parameters.get(param, "")).strip():
+                self.Parameters[param] = default_value
+
         self.handler_params_st = True
         LOGGER.info("parmHandler Done...")
         self.check_handlers()
