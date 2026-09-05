@@ -202,6 +202,7 @@ class Controller(Node):
         if not discoverSuccess:
             # start-up failed
             LOGGER.error(f"First discovery failed!!! exit {self.name}")
+            self.Notices.delete("waiting")
             self.Notices["error"] = "Error first discovery.  Check config & restart"
             self.setDriver("ST", 2)
             return
@@ -214,6 +215,7 @@ class Controller(Node):
         if not mqttSuccess:
             # start-up failed
             LOGGER.error(f"MQTT connection failed!!! exit {self.name}")
+            self.Notices.delete("waiting")
             self.Notices["error"] = "Error MQTT connection.  Check config & restart"
             self.setDriver("ST", 2)
             return
@@ -318,24 +320,6 @@ class Controller(Node):
         LOGGER.info("parmHandler: Loading parameters now")
         if params:
             self.Parameters.load(params)
-
-        defaults = {
-            "devlist": (
-                '[ {"id": "sonoff1", "type": "switch", '
-                '"status_topic": "stat/sonoff1/POWER", '
-                '"cmd_topic": "cmnd/sonoff1/power"} ]'
-            ),
-            "devfile": "data/mqtt-devices.yaml",
-            "mqtt_server": "localhost",
-            "mqtt_port": "1884",
-            "mqtt_user": "admin",
-            "mqtt_password": "admin",
-        }
-        for param, default_value in defaults.items():
-            if param not in self.Parameters:
-                self.Parameters[param] = default_value
-            elif default_value and not str(self.Parameters.get(param, "")).strip():
-                self.Parameters[param] = default_value
 
         self.handler_params_st = True
         LOGGER.info("parmHandler Done...")
