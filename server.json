@@ -8,19 +8,12 @@
     "shortPoll": "60",
     "longPoll": "300",
     "logLevel": "INFO",
-    "customParams": {
-        "devlist": "[ {\"id\": \"sonoff1\", \"type\": \"switch\", \"status_topic\": \"stat/sonoff1/POWER\", \"cmd_topic\": \"cmnd/sonoff1/power\"} ]",
-        "devfile": "data/mqtt-devices.yaml",
-        "mqtt_server": "localhost",
-        "mqtt_port": "1884",
-        "mqtt_user": "admin",
-        "mqtt_password": "admin"
-    },
+    "customParams": {},
     "credits": [
         {
             "title": "MQTT NodeServer",
             "author": "Stephen Jenkins",
-            "version": "0.50.10",
+            "version": "0.50.11",
             "date": "August 2026",
             "source": "https://github.com/UniversalDevicesInc-PG3/udi-mqtt-pg3x",
             "license": "https://github.com/UniversalDevicesInc-PG3/udi-mqtt-pg3x/blob/main/LICENSE"

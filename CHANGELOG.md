@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.50.11
+
+- **Fix config overwrite on update**: stop re-injecting example devlist/devfile and MQTT defaults on every parameter load; clear `customParams` in `server.json` so plugin updates do not reset saved Polyglot configuration
+- **Clear waiting notice** when discovery or MQTT connection fails
+
 ## 0.50.10
 
 - **Fix stop() crash on early shutdown**: remove legacy `mqttc` teardown path that raised `AttributeError` when discovery failed before the MQTT bridge was created (common during eisy-ui config)

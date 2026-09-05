@@ -9,7 +9,7 @@ import json
 
 import pytest
 import yaml
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 
 from nodes.constants import DEFAULT_CONFIG
 from nodes.device_registry import DEVICE_CONFIG
@@ -198,9 +198,12 @@ class TestLegacyStartupAndRouting:
         controller.handler_typedparams_st = True
         controller.handler_typeddata_st = True
         controller.handler_params_st = None
+        controller.Parameters = MagicMock()
 
         controller.parameterHandler({"devlist": "[]"})
 
+        controller.Parameters.load.assert_called_once_with({"devlist": "[]"})
+        controller.Parameters.__setitem__.assert_not_called()
         assert controller.handler_params_st is True
         assert controller.all_handlers_st_event.is_set()
 
